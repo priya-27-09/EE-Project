@@ -1,0 +1,593 @@
+{% extends "base.html" %}
+
+{% block title %}Civic Knowledge Base & RAG Management — AI Civic Guardian{% endblock %}
+
+{% block content %}
+<div class="admin-kb-container" style="max-width: 1280px; margin: 0 auto; padding: 1.5rem 1rem 3rem 1rem;">
+  <!-- Header & Primary Action Bar -->
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.75rem; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 1.25rem;">
+    <div>
+      <div style="display: inline-block; background: #e0e7ff; color: #3730a3; font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 4px; text-transform: uppercase; margin-bottom: 0.35rem; letter-spacing: 0.05em;">
+        Government Tech • Administration
+      </div>
+      <h1 data-i18n="admin_kb_title" style="margin: 0; font-size: 1.85rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 0.6rem;">
+        <span>📚</span> <span>Civic Knowledge Base & RAG Management</span>
+      </h1>
+      <p data-i18n="admin_kb_subtitle" style="margin: 0.35rem 0 0 0; color: #64748b; font-size: 0.95rem;">
+        Ingest, chunk, embed, and index official municipal standards for grounded AI retrieval.
+      </p>
+    </div>
+
+    <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+      <button id="btn-refresh" class="btn btn-outline-secondary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.88rem; padding: 0.5rem 0.9rem; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;">
+        <span>🔄</span> <span data-i18n="refresh">Refresh</span>
+      </button>
+      <button id="btn-rebuild-index" class="btn btn-warning" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.88rem; padding: 0.5rem 0.9rem; background: #fef08a; border: 1px solid #facc15; color: #854d0e; font-weight: 600; border-radius: 6px; cursor: pointer;">
+        <span>⚡</span> <span data-i18n="rebuild_faiss_index">Rebuild FAISS Index</span>
+      </button>
+      <button id="btn-open-upload" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.88rem; padding: 0.5rem 1.1rem; background: #1d4ed8; color: #ffffff; font-weight: 600; border: 1px solid #1d4ed8; border-radius: 6px; cursor: pointer;">
+        <span>📤</span> <span data-i18n="upload_document">Upload Document</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Operational Statistics Grid (Requirement 1 & 15: Exact Factual Statistics Only) -->
+  <div style="margin-bottom: 1.75rem;">
+    <h2 style="font-size: 1rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 0.85rem 0;">
+      Knowledge Base Overview
+    </h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem;">
+      <!-- Total Documents -->
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+        <div data-i18n="total_documents" style="font-size: 0.78rem; font-weight: 600; color: #64748b; text-transform: uppercase;">Total Documents</div>
+        <div id="stat-total-docs" style="font-size: 1.75rem; font-weight: 800; color: #0f172a; margin-top: 0.2rem;">--</div>
+        <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.2rem;">Registered in DB</div>
+      </div>
+
+      <!-- Ready Documents -->
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03); border-top: 3px solid #16a34a;">
+        <div data-i18n="ready_documents" style="font-size: 0.78rem; font-weight: 600; color: #15803d; text-transform: uppercase;">Ready Documents</div>
+        <div id="stat-ready-docs" style="font-size: 1.75rem; font-weight: 800; color: #16a34a; margin-top: 0.2rem;">--</div>
+        <div style="font-size: 0.75rem; color: #15803d; margin-top: 0.2rem;">Active for Retrieval</div>
+      </div>
+
+      <!-- Processing Documents -->
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03); border-top: 3px solid #eab308;">
+        <div data-i18n="processing_documents" style="font-size: 0.78rem; font-weight: 600; color: #a16207; text-transform: uppercase;">Processing</div>
+        <div id="stat-processing-docs" style="font-size: 1.75rem; font-weight: 800; color: #ca8a04; margin-top: 0.2rem;">--</div>
+        <div style="font-size: 0.75rem; color: #a16207; margin-top: 0.2rem;">Ingestion in progress</div>
+      </div>
+
+      <!-- Failed Documents -->
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03); border-top: 3px solid #dc2626;">
+        <div data-i18n="failed_documents" style="font-size: 0.78rem; font-weight: 600; color: #b91c1c; text-transform: uppercase;">Failed Documents</div>
+        <div id="stat-failed-docs" style="font-size: 1.75rem; font-weight: 800; color: #dc2626; margin-top: 0.2rem;">--</div>
+        <div style="font-size: 0.75rem; color: #b91c1c; margin-top: 0.2rem;">Parsing/embed error</div>
+      </div>
+
+      <!-- Archived Documents -->
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03); border-top: 3px solid #94a3b8;">
+        <div data-i18n="archived_documents" style="font-size: 0.78rem; font-weight: 600; color: #64748b; text-transform: uppercase;">Archived</div>
+        <div id="stat-archived-docs" style="font-size: 1.75rem; font-weight: 800; color: #475569; margin-top: 0.2rem;">--</div>
+        <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.2rem;">Excluded from Search</div>
+      </div>
+
+      <!-- Total Chunks -->
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+        <div data-i18n="total_chunks" style="font-size: 0.78rem; font-weight: 600; color: #64748b; text-transform: uppercase;">Total Chunks</div>
+        <div id="stat-total-chunks" style="font-size: 1.75rem; font-weight: 800; color: #0f172a; margin-top: 0.2rem;">--</div>
+        <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.2rem;">Deterministic Chunks</div>
+      </div>
+
+      <!-- FAISS Vectors -->
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03); border-top: 3px solid #0284c7;">
+        <div data-i18n="vector_count" style="font-size: 0.78rem; font-weight: 600; color: #0369a1; text-transform: uppercase;">FAISS Vectors</div>
+        <div id="stat-vector-count" style="font-size: 1.75rem; font-weight: 800; color: #0284c7; margin-top: 0.2rem;">--</div>
+        <div style="font-size: 0.75rem; color: #0369a1; margin-top: 0.2rem;"><span id="stat-index-status">READY</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAISS Vector Index Technical Card (Requirement 1 & 15: Index section) -->
+  <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 1.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.85rem; margin-bottom: 1rem;">
+      <h2 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 0.5rem;">
+        <span>⚙️</span> <span>FAISS Vector Index Details</span>
+      </h2>
+      <button onclick="handleRebuildIndex()" class="btn btn-sm btn-outline-warning" style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.82rem; padding: 0.35rem 0.75rem; font-weight: 600; border-radius: 5px; cursor: pointer;">
+        <span>⚡</span> <span data-i18n="rebuild_faiss_index">Rebuild Index</span>
+      </button>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem;">
+      <div>
+        <div data-i18n="embedding_model" style="font-size: 0.78rem; font-weight: 600; color: #64748b; text-transform: uppercase;">Embedding Model</div>
+        <div id="info-emb-model" style="font-size: 0.95rem; font-weight: 700; color: #1e293b; margin-top: 0.25rem; font-family: monospace;">--</div>
+      </div>
+      <div>
+        <div data-i18n="embedding_dimension" style="font-size: 0.78rem; font-weight: 600; color: #64748b; text-transform: uppercase;">Embedding Dimension</div>
+        <div id="info-emb-dim" style="font-size: 0.95rem; font-weight: 700; color: #1e293b; margin-top: 0.25rem;">--</div>
+      </div>
+      <div>
+        <div data-i18n="vector_count" style="font-size: 0.78rem; font-weight: 600; color: #64748b; text-transform: uppercase;">Vector Count</div>
+        <div id="info-vector-count" style="font-size: 0.95rem; font-weight: 700; color: #0284c7; margin-top: 0.25rem;">--</div>
+      </div>
+      <div>
+        <div data-i18n="last_rebuild" style="font-size: 0.78rem; font-weight: 600; color: #64748b; text-transform: uppercase;">Last Successful Rebuild</div>
+        <div id="info-last-rebuild" style="font-size: 0.88rem; font-weight: 600; color: #475569; margin-top: 0.25rem;">--</div>
+      </div>
+      <div>
+        <div data-i18n="index_status" style="font-size: 0.78rem; font-weight: 600; color: #64748b; text-transform: uppercase;">Index Status</div>
+        <div id="info-index-status" style="font-size: 0.95rem; font-weight: 700; color: #16a34a; margin-top: 0.25rem;">READY</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Document Table Card (Requirement 15: Document table with Title | Department | Language | Version | Status | Chunks | Actions) -->
+  <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.5rem; margin-bottom: 1.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+      <h2 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #0f172a;">Registered Knowledge Base Documents</h2>
+      
+      <!-- Filters -->
+      <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+        <select id="filter-dept" class="form-control" style="font-size: 0.85rem; padding: 0.4rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff;">
+          <option value="">All Departments</option>
+          <option value="Sanitation">Sanitation</option>
+          <option value="Roads">Roads & Transport</option>
+          <option value="Water">Water Supply</option>
+          <option value="Electrical">Electrical</option>
+          <option value="Administration">Administration</option>
+        </select>
+        <select id="filter-status" class="form-control" style="font-size: 0.85rem; padding: 0.4rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff;">
+          <option value="">All Statuses</option>
+          <option value="READY">READY</option>
+          <option value="PROCESSING">PROCESSING</option>
+          <option value="FAILED">FAILED</option>
+          <option value="ARCHIVED">ARCHIVED</option>
+        </select>
+        <select id="filter-lang" class="form-control" style="font-size: 0.85rem; padding: 0.4rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff;">
+          <option value="">All Languages</option>
+          <option value="en">English (en)</option>
+          <option value="ta">Tamil (ta)</option>
+          <option value="hi">Hindi (hi)</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="overflow-x: auto;">
+      <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.88rem; text-align: left;">
+        <thead>
+          <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+            <th style="padding: 0.8rem 0.75rem; font-weight: 700; color: #475569;">Title & Source</th>
+            <th style="padding: 0.8rem 0.75rem; font-weight: 700; color: #475569;">Department</th>
+            <th style="padding: 0.8rem 0.75rem; font-weight: 700; color: #475569;">Language</th>
+            <th style="padding: 0.8rem 0.75rem; font-weight: 700; color: #475569;">Version</th>
+            <th style="padding: 0.8rem 0.75rem; font-weight: 700; color: #475569;">Status</th>
+            <th style="padding: 0.8rem 0.75rem; font-weight: 700; color: #475569;">Chunks</th>
+            <th style="padding: 0.8rem 0.75rem; font-weight: 700; color: #475569; text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="docs-tbody">
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 2.5rem; color: #64748b;">Loading knowledge base documents...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Operational RAG Analytics -->
+  <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+    <h2 style="margin: 0 0 1rem 0; font-size: 1.15rem; font-weight: 700; color: #0f172a;">Live Citizen Chatbot Operational Metrics</h2>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+      <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <div style="font-size: 0.78rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Total Conversations</div>
+        <div id="analytics-total-convs" style="font-size: 1.5rem; font-weight: 800; color: #0f172a; margin-top: 0.25rem;">--</div>
+      </div>
+      <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <div style="font-size: 0.78rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Total Questions Asked</div>
+        <div id="analytics-total-queries" style="font-size: 1.5rem; font-weight: 800; color: #0f172a; margin-top: 0.25rem;">--</div>
+      </div>
+      <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <div style="font-size: 0.78rem; color: #15803d; font-weight: 600; text-transform: uppercase;">Grounded Retrievals</div>
+        <div id="analytics-success-retrievals" style="font-size: 1.5rem; font-weight: 800; color: #16a34a; margin-top: 0.25rem;">--</div>
+      </div>
+      <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <div style="font-size: 0.78rem; color: #b45309; font-weight: 600; text-transform: uppercase;">No-Context Fallbacks</div>
+        <div id="analytics-failed-retrievals" style="font-size: 1.5rem; font-weight: 800; color: #d97706; margin-top: 0.25rem;">--</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Upload Document Modal -->
+<div id="upload-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); z-index: 1050; align-items: center; justify-content: center; padding: 1rem;">
+  <div style="background: #ffffff; border-radius: 12px; width: 100%; max-width: 580px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+    <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
+      <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #0f172a;">Upload Knowledge Base Document</h3>
+      <button id="btn-close-upload" style="background: transparent; border: none; font-size: 1.25rem; cursor: pointer; color: #64748b;">✕</button>
+    </div>
+
+    <form id="upload-form" style="padding: 1.5rem;">
+      <div class="form-group" style="margin-bottom: 1rem;">
+        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">File (PDF, TXT, MD, DOCX) *</label>
+        <input type="file" id="upload-file" name="file" class="form-control" accept=".pdf,.txt,.md,.docx" required style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;" />
+        <small style="color: #64748b; font-size: 0.78rem;">Supported formats: PDF, TXT, Markdown (.md), Word (.docx). Max size: 25MB.</small>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 1rem;">
+        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Document Title *</label>
+        <input type="text" id="upload-title" name="title" class="form-control" placeholder="e.g. CPHEEO Water Pipeline Turnaround SLA" required style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;" />
+      </div>
+
+      <div class="form-group" style="margin-bottom: 1rem;">
+        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Source Agency / Publisher *</label>
+        <input type="text" id="upload-source" name="source" class="form-control" placeholder="e.g. Ministry of Housing and Urban Affairs" required style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;" />
+      </div>
+
+      <div class="form-group" style="margin-bottom: 1rem;">
+        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Source URL (Optional)</label>
+        <input type="url" id="upload-url" name="source_url" class="form-control" placeholder="https://mohua.gov.in/guidelines.pdf" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;" />
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Department</label>
+          <input type="text" id="upload-department" name="department" class="form-control" placeholder="e.g. Water Supply" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;" />
+        </div>
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Category</label>
+          <input type="text" id="upload-category" name="category" class="form-control" placeholder="e.g. Citizen Charter" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;" />
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem;">
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Language</label>
+          <select id="upload-language" name="language" class="form-control" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+            <option value="en">English (en)</option>
+            <option value="ta">Tamil (ta)</option>
+            <option value="hi">Hindi (hi)</option>
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Version</label>
+          <input type="text" id="upload-version" name="version" class="form-control" value="1.0" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;" />
+        </div>
+      </div>
+
+      <div id="upload-error" class="alert alert-danger" style="display: none; font-size: 0.85rem; margin-bottom: 1rem; padding: 0.75rem; background: #fee2e2; border: 1px solid #f87171; color: #b91c1c; border-radius: 6px;"></div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.6rem;">
+        <button type="button" id="btn-cancel-upload" class="btn btn-outline-secondary" style="padding: 0.5rem 1rem; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; cursor: pointer;">Cancel</button>
+        <button type="submit" id="btn-submit-upload" class="btn btn-primary" style="padding: 0.5rem 1.2rem; background: #1d4ed8; color: #ffffff; font-weight: 600; border: 1px solid #1d4ed8; border-radius: 6px; cursor: pointer;">Ingest Document</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Chunks & Details Inspector Modal -->
+<div id="chunks-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); z-index: 1050; align-items: center; justify-content: center; padding: 1rem;">
+  <div style="background: #ffffff; border-radius: 12px; width: 100%; max-width: 850px; max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+    <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
+      <div>
+        <h3 id="chunks-modal-title" style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #0f172a;">Document Chunks</h3>
+        <p id="chunks-modal-subtitle" style="margin: 0.2rem 0 0 0; font-size: 0.82rem; color: #64748b; font-family: monospace;"></p>
+      </div>
+      <button id="btn-close-chunks" style="background: transparent; border: none; font-size: 1.25rem; cursor: pointer; color: #64748b;">✕</button>
+    </div>
+    
+    <div id="chunks-modal-meta" style="padding: 0.75rem 1.5rem; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; font-size: 0.82rem; color: #334155; display: flex; flex-wrap: wrap; gap: 1rem;">
+      <!-- Metadata populated dynamically -->
+    </div>
+
+    <div id="chunks-modal-body" style="padding: 1.5rem; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 1rem;">
+      Loading chunks...
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    // Verify admin access
+    const user = ApiClient.getCurrentUser();
+    if (!user || user.role !== "ADMIN") {
+      alert("Access Denied: Only administrators can access Knowledge Base Management.");
+      window.location.href = "/";
+      return;
+    }
+
+    loadKBStatus();
+    loadIndexStatus();
+    loadDocuments();
+
+    // Event listeners
+    document.getElementById("btn-refresh").addEventListener("click", () => {
+      loadKBStatus();
+      loadIndexStatus();
+      loadDocuments();
+    });
+
+    document.getElementById("btn-rebuild-index").addEventListener("click", handleRebuildIndex);
+
+    // Modal controls
+    const uploadModal = document.getElementById("upload-modal");
+    document.getElementById("btn-open-upload").addEventListener("click", () => {
+      document.getElementById("upload-form").reset();
+      document.getElementById("upload-error").style.display = "none";
+      uploadModal.style.display = "flex";
+    });
+    document.getElementById("btn-close-upload").addEventListener("click", () => uploadModal.style.display = "none");
+    document.getElementById("btn-cancel-upload").addEventListener("click", () => uploadModal.style.display = "none");
+
+    document.getElementById("btn-close-chunks").addEventListener("click", () => {
+      document.getElementById("chunks-modal").style.display = "none";
+    });
+
+    // Filters
+    document.getElementById("filter-dept").addEventListener("change", loadDocuments);
+    document.getElementById("filter-status").addEventListener("change", loadDocuments);
+    document.getElementById("filter-lang").addEventListener("change", loadDocuments);
+
+    // Form submit
+    document.getElementById("upload-form").addEventListener("submit", handleUploadSubmit);
+  });
+
+  async function loadKBStatus() {
+    try {
+      const data = await ApiClient.fetch("/api/v1/admin/chatbot/status");
+      document.getElementById("stat-total-docs").textContent = data.total_documents;
+      document.getElementById("stat-ready-docs").textContent = data.ready_documents;
+      document.getElementById("stat-processing-docs").textContent = data.processing_documents;
+      document.getElementById("stat-failed-docs").textContent = data.failed_documents;
+      document.getElementById("stat-archived-docs").textContent = data.archived_documents;
+      document.getElementById("stat-total-chunks").textContent = data.total_chunks;
+      document.getElementById("stat-vector-count").textContent = data.faiss_vector_count;
+      document.getElementById("stat-index-status").textContent = data.index_status;
+
+      // Analytics
+      if (data.analytics) {
+        document.getElementById("analytics-total-convs").textContent = data.analytics.total_conversations || 0;
+        document.getElementById("analytics-total-queries").textContent = data.analytics.total_questions || 0;
+        document.getElementById("analytics-success-retrievals").textContent = data.analytics.successful_retrievals || 0;
+        document.getElementById("analytics-failed-retrievals").textContent = data.analytics.retrieval_failures || 0;
+      }
+    } catch (err) {
+      console.error("Failed to load KB status:", err);
+    }
+  }
+
+  async function loadIndexStatus() {
+    try {
+      const data = await ApiClient.fetch("/api/v1/admin/chatbot/index/status");
+      document.getElementById("info-emb-model").textContent = data.embedding_model;
+      document.getElementById("info-emb-dim").textContent = data.embedding_dimension + "-dim";
+      document.getElementById("info-vector-count").textContent = data.vector_count + " vectors (" + data.indexed_chunks + " chunks indexed)";
+      document.getElementById("info-last-rebuild").textContent = data.last_rebuild ? new Date(data.last_rebuild).toLocaleString() : "Never";
+      document.getElementById("info-index-status").textContent = data.status;
+      document.getElementById("info-index-status").style.color = data.status === "READY" ? "#16a34a" : "#ca8a04";
+    } catch (err) {
+      console.error("Failed to load index status:", err);
+    }
+  }
+
+  async function loadDocuments() {
+    const tbody = document.getElementById("docs-tbody");
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2.5rem; color: #64748b;">Loading documents...</td></tr>`;
+
+    const dept = document.getElementById("filter-dept").value;
+    const stat = document.getElementById("filter-status").value;
+    const lang = document.getElementById("filter-lang").value;
+
+    let url = "/api/v1/admin/chatbot/documents?limit=50";
+    if (dept) url += `&department=${encodeURIComponent(dept)}`;
+    if (stat) url += `&status=${encodeURIComponent(stat)}`;
+    if (lang) url += `&language=${encodeURIComponent(lang)}`;
+
+    try {
+      const res = await ApiClient.fetch(url);
+      if (!res.items || res.items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2.5rem; color: #94a3b8;">No knowledge base documents found. Click "Upload Document" to add official standards.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = "";
+      res.items.forEach(doc => {
+        const tr = document.createElement("tr");
+        tr.style.borderBottom = "1px solid #f1f5f9";
+
+        let statusBadge = `<span class="badge" style="background: #dcfce7; color: #166534; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 0.78rem;">READY</span>`;
+        if (doc.status === "PROCESSING") statusBadge = `<span class="badge" style="background: #fef9c3; color: #854d0e; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 0.78rem;">PROCESSING</span>`;
+        if (doc.status === "FAILED") statusBadge = `<span class="badge" style="background: #fee2e2; color: #991b1b; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 0.78rem;">FAILED</span>`;
+        if (doc.status === "ARCHIVED") statusBadge = `<span class="badge" style="background: #e2e8f0; color: #475569; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 0.78rem;">ARCHIVED</span>`;
+
+        tr.innerHTML = `
+          <td style="padding: 0.8rem 0.75rem;">
+            <div style="font-weight: 700; color: #0f172a; font-size: 0.92rem;">${escapeHtml(doc.title)}</div>
+            <div style="font-size: 0.78rem; color: #64748b; font-family: monospace;">${escapeHtml(doc.document_id)} • ${escapeHtml(doc.source)}</div>
+          </td>
+          <td style="padding: 0.8rem 0.75rem; color: #334155;">${escapeHtml(doc.department || "General")}</td>
+          <td style="padding: 0.8rem 0.75rem; text-transform: uppercase; font-weight: 600; color: #475569;">${escapeHtml(doc.language)}</td>
+          <td style="padding: 0.8rem 0.75rem; color: #475569;">v${escapeHtml(doc.version)}</td>
+          <td style="padding: 0.8rem 0.75rem;">${statusBadge}</td>
+          <td style="padding: 0.8rem 0.75rem; font-weight: 700; color: #0f172a;">${doc.chunk_count}</td>
+          <td style="padding: 0.8rem 0.75rem; text-align: right; white-space: nowrap;">
+            <button class="btn btn-sm" onclick="viewDocumentDetail('${doc.document_id}')" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 0.3rem 0.65rem; border-radius: 5px; font-size: 0.8rem; cursor: pointer; margin-right: 0.3rem;">View</button>
+            <button class="btn btn-sm" onclick="reprocessDocument('${doc.document_id}')" style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; padding: 0.3rem 0.65rem; border-radius: 5px; font-size: 0.8rem; cursor: pointer; margin-right: 0.3rem;">Process</button>
+            ${doc.status !== "ARCHIVED" ? `<button class="btn btn-sm" onclick="archiveDocument('${doc.document_id}')" style="background: #fff1f2; border: 1px solid #fecdd3; color: #be123c; padding: 0.3rem 0.65rem; border-radius: 5px; font-size: 0.8rem; cursor: pointer;">Archive</button>` : ""}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2.5rem; color: #ef4444;">Failed to load documents: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  async function handleUploadSubmit(e) {
+    e.preventDefault();
+    const btn = document.getElementById("btn-submit-upload");
+    const errBox = document.getElementById("upload-error");
+    btn.disabled = true;
+    btn.textContent = "Ingesting...";
+    errBox.style.display = "none";
+
+    const formData = new FormData();
+    const fileInput = document.getElementById("upload-file");
+    if (!fileInput.files || fileInput.files.length === 0) {
+      errBox.style.display = "block";
+      errBox.textContent = "Please select a valid document file.";
+      btn.disabled = false;
+      btn.textContent = "Ingest Document";
+      return;
+    }
+
+    formData.append("file", fileInput.files[0]);
+    formData.append("title", document.getElementById("upload-title").value);
+    formData.append("source", document.getElementById("upload-source").value);
+    formData.append("source_url", document.getElementById("upload-url").value || "");
+    formData.append("department", document.getElementById("upload-department").value || "");
+    formData.append("category", document.getElementById("upload-category").value || "");
+    formData.append("language", document.getElementById("upload-language").value);
+    formData.append("version", document.getElementById("upload-version").value || "1.0");
+
+    try {
+      const token = ApiClient.getToken();
+      const resp = await fetch("/api/v1/admin/chatbot/documents", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` },
+        body: formData,
+      });
+
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data.detail || "Upload rejected by server.");
+      }
+
+      document.getElementById("upload-modal").style.display = "none";
+      alert(`Document Ingested Successfully: ${data.document_id} (${data.status})`);
+      loadKBStatus();
+      loadIndexStatus();
+      loadDocuments();
+    } catch (err) {
+      errBox.style.display = "block";
+      errBox.textContent = err.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Ingest Document";
+    }
+  }
+
+  async function viewDocumentDetail(docIdentifier) {
+    const modal = document.getElementById("chunks-modal");
+    const body = document.getElementById("chunks-modal-body");
+    const metaBar = document.getElementById("chunks-modal-meta");
+    modal.style.display = "flex";
+    body.innerHTML = `<div>Loading chunks and diagnostics...</div>`;
+    metaBar.innerHTML = "";
+
+    try {
+      const doc = await ApiClient.fetch(`/api/v1/admin/chatbot/documents/${docIdentifier}`);
+      document.getElementById("chunks-modal-title").textContent = doc.title;
+      document.getElementById("chunks-modal-subtitle").textContent = `${doc.document_id} • SHA-256: ${doc.checksum.substring(0, 16)}...`;
+
+      metaBar.innerHTML = `
+        <div><strong>Department:</strong> ${escapeHtml(doc.department || "General")}</div>
+        <div><strong>Source:</strong> ${escapeHtml(doc.source)}</div>
+        <div><strong>Format:</strong> ${escapeHtml(doc.file_type.toUpperCase())} (${Math.round(doc.file_size / 1024)} KB)</div>
+        <div><strong>Pages:</strong> ${doc.page_count}</div>
+        <div><strong>Status:</strong> <span style="font-weight: 700;">${doc.status}</span></div>
+        <div><strong>Total Chunks:</strong> ${doc.chunk_count}</div>
+      `;
+
+      if (doc.error_message) {
+        metaBar.innerHTML += `<div style="width: 100%; color: #dc2626; margin-top: 0.3rem;"><strong>Error:</strong> ${escapeHtml(doc.error_message)}</div>`;
+      }
+
+      if (!doc.chunks || doc.chunks.length === 0) {
+        body.innerHTML = `<div style="color: #64748b; padding: 2rem; text-align: center;">No chunks found for this document.</div>`;
+        return;
+      }
+
+      body.innerHTML = "";
+      doc.chunks.forEach(c => {
+        const card = document.createElement("div");
+        card.style.background = "#f8fafc";
+        card.style.border = "1px solid #e2e8f0";
+        card.style.borderRadius = "8px";
+        card.style.padding = "1rem";
+
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 0.5rem;">
+            <span>Chunk #${c.chunk_index} (${escapeHtml(c.chunk_id)})</span>
+            <span>Page ${c.page_number} • Section: ${escapeHtml(c.section || "General")} • Tokens: ${c.token_count || '--'}</span>
+          </div>
+          <div style="font-size: 0.86rem; color: #1e293b; white-space: pre-wrap; line-height: 1.5; font-family: system-ui, -apple-system, sans-serif;">${escapeHtml(c.text)}</div>
+        `;
+        body.appendChild(card);
+      });
+    } catch (err) {
+      body.innerHTML = `<div class="alert alert-danger" style="color: #dc2626; padding: 1rem;">Failed to load document details: ${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  async function reprocessDocument(docIdentifier) {
+    if (!confirm(`Reprocess document ${docIdentifier}? This will delete existing chunks and re-embed all sections.`)) return;
+    try {
+      const res = await ApiClient.fetch(`/api/v1/admin/chatbot/documents/${docIdentifier}/process`, { method: "POST" });
+      alert(`Document Reprocessed: ${res.message || res.status}`);
+      loadKBStatus();
+      loadIndexStatus();
+      loadDocuments();
+    } catch (err) {
+      alert("Failed to reprocess document: " + err.message);
+    }
+  }
+
+  async function archiveDocument(docIdentifier) {
+    if (!confirm(`Archive document ${docIdentifier}? It will be retained for audit history but immediately excluded from live FAISS vector search.`)) return;
+    try {
+      await ApiClient.fetch(`/api/v1/admin/chatbot/documents/${docIdentifier}/archive`, { method: "POST" });
+      alert("Document archived successfully and vector index rebuilt.");
+      loadKBStatus();
+      loadIndexStatus();
+      loadDocuments();
+    } catch (err) {
+      alert("Failed to archive document: " + err.message);
+    }
+  }
+
+  async function handleRebuildIndex() {
+    if (!confirm("Rebuild the entire FAISS vector index atomically from all READY documents?")) return;
+    const btn = document.getElementById("btn-rebuild-index");
+    btn.disabled = true;
+    btn.textContent = "Rebuilding Index...";
+
+    try {
+      const res = await ApiClient.fetch("/api/v1/admin/chatbot/index/rebuild", { method: "POST" });
+      alert(`Index Rebuild Complete: ${res.vector_count} vectors indexed across ${res.document_count} documents (${res.chunk_count || 0} chunks).`);
+      loadKBStatus();
+      loadIndexStatus();
+    } catch (err) {
+      alert("Index rebuild failed: " + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `<span>⚡</span> <span data-i18n="rebuild_faiss_index">Rebuild FAISS Index</span>`;
+    }
+  }
+
+  function escapeHtml(text) {
+    if (!text) return "";
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,17 @@
+{
+  "candidate_id": "MODEL-2026-000002",
+  "base_model": "yolo11n.pt",
+  "ultralytics_version": "8.4.200",
+  "epochs": 5,
+  "imgsz": 320,
+  "batch_size": 32,
+  "device": "cpu",
+  "training_duration_seconds": 784.1428785324097,
+  "dataset_version": "DS-2026-000018",
+  "train_images": 1063,
+  "val_images": 304,
+  "test_images": 152,
+  "weights_best": "C:\\Users\\priya\\OneDrive\\Desktop\\EE\\models\\MODEL-2026-000002\\weights\\best.pt",
+  "weights_last": "C:\\Users\\priya\\OneDrive\\Desktop\\EE\\models\\MODEL-2026-000002\\weights\\last.pt",
+  "created_at": "2026-11-03T12:28:43.665046+00:00"
+}

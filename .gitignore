@@ -1,0 +1,64 @@
+# Environment and Secrets (STRICTLY PROHIBITED FROM GIT)
+.env
+.env.*
+!.env.example
+!.env.render.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing & Logs
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+out_test.txt
+*.bak
+
+# Large Datasets, Training Runs & Raw Archives
+dataset/
+runs/
+yolo11n.pt
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.cache
+
+# Experimental / Inactive Model Checkpoints
+models/MODEL-2026-000001/
+
+# Uploads & Ephemeral Evidence
+uploads/*
+!uploads/.gitkeep
+scratch/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

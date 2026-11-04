@@ -1,0 +1,1330 @@
+{% extends "base.html" %}
+
+{% block title %}Officer Complaint Management — AI Civic Guardian{% endblock %}
+
+{% block content %}
+<!-- Leaflet Map CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+<div style="max-width: 950px; margin: 0 auto;">
+  <!-- Navigation Header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
+    <a href="/officer/dashboard" class="btn btn-secondary" style="min-height: 38px; padding: 0.4rem 0.9rem; font-size: 0.85rem;">
+      ← Back to Officer Dashboard
+    </a>
+    <div style="display: flex; gap: 0.5rem;">
+      <button id="btn-refresh-detail" class="btn btn-secondary" style="min-height: 38px; padding: 0.4rem 0.9rem; font-size: 0.85rem;">
+        🔄 Refresh
+      </button>
+    </div>
+  </div>
+
+  <div id="detail-loading" style="text-align: center; padding: 3rem; color: var(--text-light);" data-i18n="loading">
+    Loading grievance records from PostgreSQL...
+  </div>
+
+  <div id="detail-alert" style="display: none; margin-bottom: 1.5rem;"></div>
+
+  <div id="detail-main-content" style="display: none;">
+    <!-- Main Header Card -->
+    <div class="card" style="padding: 1.75rem; margin-bottom: 1.5rem; background: #ffffff;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1.25rem; margin-bottom: 1.25rem;">
+        <div>
+          <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;">
+            MUNICIPAL GRIEVANCE TRACKING NUMBER
+          </div>
+          <h1 id="complaint-id-header" style="font-size: 1.9rem; color: var(--primary-navy); margin: 0.2rem 0; font-weight: 800;">
+            CG-2026-XXXXXX
+          </h1>
+          <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.35rem; flex-wrap: wrap;">
+            <span id="complaint-issue-type" style="font-size: 1.15rem; color: var(--primary-blue); font-weight: 700;">—</span>
+            <span style="color: var(--text-light);">•</span>
+            <span id="complaint-dept-badge" class="badge" style="background: #f1f5f9; color: var(--primary-navy); font-weight: 600;">—</span>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+          <span id="badge-severity" class="badge badge-severity-medium" style="font-size: 0.85rem; padding: 0.35rem 0.75rem;">MEDIUM</span>
+          <span id="badge-status" class="badge badge-submitted" style="font-size: 0.85rem; padding: 0.35rem 0.75rem;">SUBMITTED</span>
+        </div>
+      </div>
+
+      <!-- Quick Metadata Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <div style="background: #f8fafc; padding: 0.85rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+          <div style="font-size: 0.75rem; color: var(--text-light); font-weight: 700; text-transform: uppercase;">Location / GPS</div>
+          <div id="complaint-location" style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-top: 0.2rem;">—</div>
+        </div>
+
+        <div style="background: #f8fafc; padding: 0.85rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+          <div style="font-size: 0.75rem; color: var(--text-light); font-weight: 700; text-transform: uppercase;">Submission Date / Time</div>
+          <div id="complaint-created-at" style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-top: 0.2rem;">—</div>
+        </div>
+
+        <div style="background: #f8fafc; padding: 0.85rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+          <div style="font-size: 0.75rem; color: var(--text-light); font-weight: 700; text-transform: uppercase;">Citizen Language</div>
+          <div id="complaint-language" style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-top: 0.2rem;">—</div>
+        </div>
+
+        <div style="background: #f8fafc; padding: 0.85rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+          <div style="font-size: 0.75rem; color: var(--text-light); font-weight: 700; text-transform: uppercase;">Complainant (Citizen)</div>
+          <div id="complaint-citizen" style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-top: 0.2rem;">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Location Inspection & Coimbatore Satellite Map Card -->
+    <div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem; background: #ffffff;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+          <h2 style="font-size: 1.1rem; color: var(--primary-navy); margin: 0; font-weight: 700;">
+            🗺️ Geographic Inspection & Satellite Verification
+          </h2>
+          <div id="officer-map-address" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem;">—</div>
+        </div>
+        <div style="display: flex; gap: 0.35rem;">
+          <button type="button" id="btn-officer-sat" class="btn btn-secondary" style="min-height: 30px; padding: 0.2rem 0.6rem; font-size: 0.75rem; background: #e0f2fe; color: #0369a1; font-weight: 700;">
+            🛰️ Satellite
+          </button>
+          <button type="button" id="btn-officer-osm" class="btn btn-secondary" style="min-height: 30px; padding: 0.2rem 0.6rem; font-size: 0.75rem;">
+            🗺️ Street Map
+          </button>
+        </div>
+      </div>
+      <div id="officer-complaint-map" style="height: 280px; width: 100%; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: #f8fafc;"></div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-light);">
+        <span>Layer: Esri World Imagery (Satellite) &bull; CCMC Boundary Outline</span>
+        <span id="officer-coords-badge" style="font-weight: 600; color: var(--primary-navy);">Lat: —, Lon: —</span>
+      </div>
+    </div>
+
+    <!-- Duplicate Warning Card (if flagged) -->
+    <div id="duplicate-warning-card" class="card" style="display: none; padding: 1.25rem; margin-bottom: 1.5rem; background: #fffbeb; border-left: 5px solid var(--warning-amber);">
+      <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+        <span style="font-size: 1.5rem;">⚠️</span>
+        <div style="flex: 1;">
+          <h2 style="font-size: 1.05rem; font-weight: 700; color: #92400e; margin: 0 0 0.25rem 0;">
+            Potential Duplicate Grievance Detected
+          </h2>
+          <p style="font-size: 0.85rem; color: #78350f; margin: 0 0 0.5rem 0;">
+            This grievance shares high text or geographic similarity with previously registered complaints in your department:
+          </p>
+          <div id="duplicate-candidates-list" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Verification Card -->
+    <div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem; background: #ffffff;">
+      <h2 style="font-size: 1.1rem; color: var(--primary-navy); margin: 0 0 0.75rem 0; font-weight: 700;">
+        🤖 AI Computer Vision Verification
+      </h2>
+      <div id="ai-info-panel" style="padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: #f8fafc;">
+        <!-- Dynamic AI status rendered here -->
+      </div>
+    </div>
+
+    <!-- Citizen Description Card -->
+    <div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem; background: #ffffff;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+        <h2 style="font-size: 1.1rem; color: var(--primary-navy); margin: 0; font-weight: 700;">
+          📝 Citizen Provided Grievance Description
+        </h2>
+        <span id="orig-lang-tag" class="badge" style="background: #e2e8f0; color: #334155; font-size: 0.75rem;">Original (en)</span>
+      </div>
+      <div id="complaint-description" style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1rem; font-size: 0.95rem; white-space: pre-wrap; color: var(--text-main); line-height: 1.6;">
+        —
+      </div>
+    </div>
+
+    <!-- Evidence Gallery Card -->
+    <div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem; background: #ffffff;">
+      <h2 style="font-size: 1.1rem; color: var(--primary-navy); margin: 0 0 0.75rem 0; font-weight: 700;">
+        📸 Attached Citizen Evidence
+      </h2>
+      <div id="evidence-gallery" style="display: flex; gap: 1rem; flex-wrap: wrap;"></div>
+      <div id="no-evidence-notice" style="color: var(--text-light); font-size: 0.875rem; display: none; padding: 1rem; background: #f8fafc; border-radius: var(--radius-sm); border: 1px dashed var(--border-color); text-align: center;">
+        No photographic, video, or audio evidence was attached during citizen registration.
+      </div>
+    </div>
+
+    <!-- RESOLUTION EVIDENCE VERIFICATION (STEP 9) -->
+    <div id="resolution-verification-card" class="card" style="padding: 1.5rem; margin-bottom: 1.5rem; background: #ffffff; border: 2px solid #e0e7ff;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+          <h2 style="font-size: 1.15rem; color: var(--primary-navy); margin: 0; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+            🔍 <span data-i18n="resolution_verification">Resolution Evidence Verification</span>
+          </h2>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.25rem 0 0 0;">
+            Deterministic classical computer vision comparison (<code id="verification-algo-version" style="font-weight: 700;">resolution-v1</code>). Compares citizen original vs officer repair photo.
+          </p>
+        </div>
+        <div id="verification-status-badge-container">
+          <span class="badge" style="background: #f1f5f9; color: #475569; font-size: 0.85rem; padding: 0.35rem 0.75rem;">PENDING ANALYSIS</span>
+        </div>
+      </div>
+
+      <!-- Before vs After Evidence Side-by-Side -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+        <!-- Before Evidence -->
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1rem;">
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem;" data-i18n="before_evidence">
+            📷 Before / Original Citizen Evidence
+          </div>
+          <div id="verification-before-preview" style="min-height: 180px; display: flex; align-items: center; justify-content: center; background: #f1f5f9; border-radius: 4px; overflow: hidden;">
+            <span style="color: var(--text-light); font-size: 0.85rem;">No before image available</span>
+          </div>
+          <div id="verification-before-info" style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.4rem;"></div>
+        </div>
+
+        <!-- After Evidence -->
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1rem;">
+          <div style="font-size: 0.8rem; font-weight: 700; color: #166534; text-transform: uppercase; margin-bottom: 0.5rem;" data-i18n="after_evidence">
+            🛠️ After / Officer Resolution Evidence
+          </div>
+          <div id="verification-after-preview" style="min-height: 180px; display: flex; align-items: center; justify-content: center; background: #f1f5f9; border-radius: 4px; overflow: hidden;">
+            <span style="color: var(--text-light); font-size: 0.85rem;">No resolution image uploaded</span>
+          </div>
+          <div id="verification-after-info" style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.4rem;"></div>
+
+          <!-- Quick Upload Resolution Image Box -->
+          <div id="quick-upload-resolution-box" style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed var(--border-color);">
+            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">
+              Upload New Resolution Photo
+            </label>
+            <div style="display: flex; gap: 0.5rem;">
+              <input type="file" id="direct-resolution-file" accept="image/*" class="form-control" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;">
+              <button id="btn-upload-resolution-direct" class="btn btn-secondary" style="min-height: 32px; padding: 0.2rem 0.75rem; font-size: 0.8rem; white-space: nowrap;">
+                Upload
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metrics and Verification Details Panel -->
+      <div id="verification-details-panel" style="display: none; background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-main);">Verification Score:</span>
+            <span id="verification-score-badge" style="font-size: 1.15rem; font-weight: 800; color: var(--primary-blue); margin-left: 0.25rem;">—</span>
+          </div>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--text-light);">Feature Alignment:</span>
+            <span id="verification-alignment-badge" class="badge" style="background: #e2e8f0; color: #475569; font-size: 0.75rem;">—</span>
+          </div>
+        </div>
+
+        <div id="verification-reason-text" style="font-size: 0.85rem; color: var(--text-main); margin-bottom: 0.75rem; line-height: 1.5; background: #ffffff; padding: 0.6rem 0.8rem; border-radius: 4px; border: 1px solid var(--border-color);">
+          —
+        </div>
+
+        <!-- Measurable CV Metrics Pill Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.5rem; text-align: center;">
+          <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 4px; padding: 0.5rem;">
+            <div style="font-size: 0.7rem; color: var(--text-light); font-weight: 600;">SSIM Index</div>
+            <div id="metric-ssim" style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-top: 0.15rem;">—</div>
+          </div>
+          <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 4px; padding: 0.5rem;">
+            <div style="font-size: 0.7rem; color: var(--text-light); font-weight: 600;">Pixel Diff (MAD)</div>
+            <div id="metric-pixeldiff" style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-top: 0.15rem;">—</div>
+          </div>
+          <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 4px; padding: 0.5rem;">
+            <div style="font-size: 0.7rem; color: var(--text-light); font-weight: 600;">Edge Similarity</div>
+            <div id="metric-edgesim" style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-top: 0.15rem;">—</div>
+          </div>
+          <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 4px; padding: 0.5rem;">
+            <div style="font-size: 0.7rem; color: var(--text-light); font-weight: 600;">Color Histogram</div>
+            <div id="metric-histsim" style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-top: 0.15rem;">—</div>
+          </div>
+          <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 4px; padding: 0.5rem;">
+            <div style="font-size: 0.7rem; color: var(--text-light); font-weight: 600;">pHash Hamming</div>
+            <div id="metric-phash" style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-top: 0.15rem;">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Human Review Notice / Form (if NEEDS_HUMAN_REVIEW or after review) -->
+      <div id="verification-human-review-box" style="display: none; padding: 1rem; border-radius: var(--radius-sm); margin-bottom: 1.25rem;">
+        <!-- Filled dynamically -->
+      </div>
+
+      <!-- Run Verification Action Button -->
+      <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+        <button id="btn-run-verification" class="btn btn-primary" style="min-height: 38px; padding: 0.4rem 1.25rem; font-size: 0.9rem;">
+          ⚡ <span data-i18n="run_verification">Run Verification</span>
+        </button>
+        <span id="verification-loading-text" style="display: none; font-size: 0.85rem; color: var(--primary-blue); font-weight: 600;">
+          ⏳ Computing classical computer vision metrics...
+        </span>
+      </div>
+    </div>
+
+    <!-- BLOCKCHAIN AUDIT & INTEGRITY TRAIL (Hidden from UI) -->
+    <div id="blockchain-audit-card" style="display: none !important;" aria-hidden="true">
+      <div id="blockchain-status-pill"></div>
+      <div id="blockchain-milestones-grid"></div>
+      <div id="blockchain-anchors-container">
+        <span id="anchors-count-badge"></span>
+        <div id="blockchain-anchors-list"></div>
+      </div>
+    </div>
+
+    <!-- WORKFLOW ACTION CENTER -->
+    <div class="card" style="padding: 1.5rem; margin-bottom: 1.5rem; background: #ffffff; border: 2px solid #e2e8f0;">
+      <h2 style="font-size: 1.2rem; color: var(--primary-navy); margin: 0 0 0.5rem 0; font-weight: 700;">
+
+        ⚡ Officer Workflow & Status Actions
+      </h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0 0 1.25rem 0;">
+        Enforce canonical status transitions: <code>SUBMITTED</code> → <code>DEPARTMENT_ASSIGNED</code> → <code>IN_PROGRESS</code> → <code>RESOLVED</code> (or <code>NEEDS_HUMAN_REVIEW</code>).
+      </p>
+
+      <!-- Action Button Toolbar -->
+      <div id="status-action-toolbar" style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+        <!-- Status change buttons generated dynamically -->
+      </div>
+
+      <!-- Resolution Panel -->
+      <div id="resolution-panel" style="padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid #bbf7d0; background: #f0fdf4; margin-top: 1rem;">
+        <h3 style="font-size: 1rem; color: #166534; font-weight: 700; margin: 0 0 0.5rem 0;">
+          ✅ Resolve This Grievance
+        </h3>
+        <p style="font-size: 0.85rem; color: #15803d; margin: 0 0 1rem 0;">
+          Resolving requires a clear explanation of municipal work completed. You can also upload before/after repair evidence.
+        </p>
+
+        <div style="margin-bottom: 1rem;">
+          <label for="resolution-note-input" style="display: block; font-size: 0.85rem; font-weight: 600; color: #166534; margin-bottom: 0.35rem;">
+            Official Resolution Description *
+          </label>
+          <textarea id="resolution-note-input" class="form-control" rows="3" placeholder="e.g. Municipal road crew filled the pothole with hot-mix asphalt and completed compaction." style="width: 100%; font-size: 0.9rem;"></textarea>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <label for="resolution-evidence-file" style="display: block; font-size: 0.85rem; font-weight: 600; color: #166534; margin-bottom: 0.35rem;">
+            Upload Resolution Photo / Repair Proof (Optional)
+          </label>
+          <input type="file" id="resolution-evidence-file" class="form-control" accept="image/*,video/*" style="font-size: 0.85rem;">
+          <div style="font-size: 0.75rem; color: #15803d; margin-top: 0.35rem;">
+            ℹ️ <em>AI-assisted evidence verification is not available yet. Officer manual review is recorded in audit trail.</em>
+          </div>
+        </div>
+
+        <button id="btn-submit-resolution" class="btn btn-primary" style="background: var(--success-green); border-color: var(--success-green); min-height: 38px;">
+          Confirm & Mark RESOLVED
+        </button>
+      </div>
+
+      <!-- Resolution Info Display (if already resolved) -->
+      <div id="resolution-summary-box" style="display: none; padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid #86efac; background: #f0fdf4;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <span style="font-size: 1.3rem;">🎉</span>
+          <h3 style="font-size: 1.05rem; font-weight: 700; color: #166534; margin: 0;">Grievance Officially Resolved</h3>
+        </div>
+        <p id="resolution-text" style="font-size: 0.95rem; color: #14532d; margin: 0 0 0.5rem 0; font-weight: 600;"></p>
+        <div id="resolution-meta" style="font-size: 0.8rem; color: #15803d;"></div>
+      </div>
+    </div>
+
+    <!-- OFFICER NOTES SECTION -->
+    <div class="card" style="padding: 1.5rem; margin-bottom: 1.5rem; background: #ffffff;">
+      <h2 style="font-size: 1.1rem; color: var(--primary-navy); margin: 0 0 1rem 0; font-weight: 700;">
+        💬 Operational Officer Notes & Field Remarks
+      </h2>
+
+      <!-- Add Note Form -->
+      <div style="margin-bottom: 1.5rem; background: #f8fafc; padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <label for="new-note-input" style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.35rem;">
+          Add Operational Note / Team Assignment
+        </label>
+        <textarea id="new-note-input" class="form-control" rows="2" placeholder="e.g. Field inspection scheduled for tomorrow morning. Inspection team #4 assigned." style="width: 100%; font-size: 0.9rem; margin-bottom: 0.75rem;"></textarea>
+        <button id="btn-add-note" class="btn btn-secondary" style="min-height: 36px; padding: 0.3rem 1rem; font-size: 0.85rem;">
+          ➕ Save Officer Note
+        </button>
+      </div>
+
+      <!-- Notes Timeline -->
+      <div id="officer-notes-container">
+        <!-- Notes list -->
+      </div>
+      <div id="no-notes-notice" style="color: var(--text-light); font-size: 0.85rem; text-align: center; padding: 1.5rem;">
+        No operational notes recorded yet for this complaint.
+      </div>
+    </div>
+
+    <!-- STATUS AUDIT TRAIL TIMELINE -->
+    <div class="card" style="padding: 1.5rem; margin-bottom: 2rem; background: #ffffff;">
+      <h2 style="font-size: 1.1rem; color: var(--primary-navy); margin: 0 0 1rem 0; font-weight: 700;">
+        📜 Official Status History & Audit Trail
+      </h2>
+      <ul id="status-timeline" class="timeline" style="margin: 0; padding-left: 1.5rem;">
+        <!-- Status events -->
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Status Transition Modal -->
+<div id="status-modal" style="display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.6); z-index: 999; align-items: center; justify-content: center; padding: 1rem;">
+  <div style="background: #ffffff; max-width: 480px; width: 100%; border-radius: var(--radius-md); padding: 1.5rem; box-shadow: var(--shadow-lg);">
+    <h3 style="font-size: 1.15rem; color: var(--primary-navy); margin: 0 0 0.5rem 0; font-weight: 700;">
+      Confirm Status Transition
+    </h3>
+    <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0 0 1rem 0;">
+      Transition complaint status to <strong id="modal-target-status" style="color: var(--primary-blue);">—</strong>:
+    </p>
+
+    <div style="margin-bottom: 1.25rem;">
+      <label for="modal-status-note" style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.35rem;">
+        Action Note / Reason (Optional)
+      </label>
+      <textarea id="modal-status-note" class="form-control" rows="3" placeholder="e.g. Dispatched maintenance squad to inspect damaged roadway." style="width: 100%; font-size: 0.85rem;"></textarea>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+      <button id="btn-cancel-modal" class="btn btn-secondary" style="min-height: 36px; padding: 0.3rem 0.9rem;">
+        Cancel
+      </button>
+      <button id="btn-confirm-status" class="btn btn-primary" style="min-height: 36px; padding: 0.3rem 1.1rem;">
+        Confirm Transition
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function escapeHtml(text) {
+    if (text === null || text === undefined) return "";
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  if (!ApiClient.isAuthenticated()) {
+    window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+  }
+
+  const currentUser = ApiClient.getCurrentUser();
+  const currentRole = (currentUser && currentUser.role) ? currentUser.role.toUpperCase() : "";
+  if (currentUser && currentRole !== "OFFICER" && currentRole !== "ADMIN") {
+    alert("Access restricted: You must be an authorized officer to view this complaint.");
+    window.location.href = "/dashboard";
+  }
+
+  // Extract complaint_id from Jinja context or URL pathname
+  const templateComplaintId = "{{ complaint_id if complaint_id is defined else '' }}".trim();
+  const pathParts = window.location.pathname.split("/").filter(Boolean);
+  const complaintId = templateComplaintId || pathParts[pathParts.length - 1];
+
+  let currentComplaintData = null;
+  let targetModalStatus = null;
+
+  async function loadComplaint() {
+    const loadingEl = document.getElementById("detail-loading");
+    const mainEl = document.getElementById("detail-main-content");
+    const alertBox = document.getElementById("detail-alert");
+
+    loadingEl.style.display = "block";
+    mainEl.style.display = "none";
+    alertBox.style.display = "none";
+
+    try {
+      const c = await ApiClient.getOfficerComplaint(complaintId);
+      currentComplaintData = c;
+      renderComplaint(c);
+
+      loadingEl.style.display = "none";
+      mainEl.style.display = "block";
+    } catch (err) {
+      loadingEl.style.display = "none";
+      alertBox.style.display = "block";
+      const errMsg = err.message || "Failed to load complaint details.";
+      let errTitle = "Grievance Record Notice";
+      let errBody = errMsg;
+      let alertClass = "alert-danger";
+
+      if (errMsg.includes("403") || errMsg.includes("Forbidden") || errMsg.includes("another department") || errMsg.includes("belongs to another")) {
+        errTitle = "Department Jurisdiction Restriction";
+        errBody = `This grievance (${complaintId}) is assigned to another municipal department. Officers can only access grievances within their assigned departmental jurisdiction.`;
+        alertClass = "alert-warning";
+      } else if (errMsg.includes("404") || errMsg.includes("not found") || errMsg.includes("Not Found")) {
+        errTitle = "Complaint Not Found";
+        errBody = `Grievance reference '${complaintId}' was not found in the municipal database.`;
+      } else if (errMsg.includes("401") || errMsg.includes("Unauthorized") || errMsg.includes("token")) {
+        errTitle = "Session Expired";
+        errBody = "Your session has expired or is invalid. Please log in again.";
+      }
+
+      alertBox.innerHTML = `
+        <div class="alert ${alertClass}" role="alert">
+          <div style="font-weight: 700; font-size: 1rem; margin-bottom: 0.25rem;">${escapeHtml(errTitle)}</div>
+          <div>${escapeHtml(errBody)}</div>
+          <div style="margin-top: 0.75rem;">
+            <a href="/officer/dashboard" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.35rem 0.85rem;">&larr; Return to Officer Dashboard</a>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  function renderComplaint(c) {
+    document.getElementById("complaint-id-header").textContent = c.complaint_id;
+    document.getElementById("complaint-issue-type").textContent = tIssue(c.issue_type);
+    document.getElementById("complaint-dept-badge").textContent = c.department ? tDepartment(c.department.name) : "Assigned Department";
+
+    // Badges
+    const badgeSev = document.getElementById("badge-severity");
+    badgeSev.className = `badge badge-severity-${(c.severity || "medium").toLowerCase()}`;
+    badgeSev.textContent = tSeverity(c.severity);
+
+    const badgeStatus = document.getElementById("badge-status");
+    let statusClass = "badge-submitted";
+    const st = (c.status || "").toUpperCase();
+    if (st === "IN_PROGRESS") statusClass = "badge-in-progress";
+    else if (st === "RESOLVED") statusClass = "badge-resolved";
+    else if (st === "NEEDS_HUMAN_REVIEW") statusClass = "badge-needs-review";
+    else if (st === "AI_VERIFIED") statusClass = "badge-ai-verified";
+    badgeStatus.className = `badge ${statusClass}`;
+    badgeStatus.textContent = tStatus(c.status);
+
+    // Location
+    const placePart = c.place_name ? `<div style="font-size: 0.95rem; font-weight: 700; color: var(--primary-navy);">📍 ${escapeHtml(c.place_name)}</div>` : "";
+    const addrPart = c.address && c.address !== c.place_name ? `<div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.15rem;">${escapeHtml(c.address)}</div>` : "";
+    if (c.latitude !== null && c.longitude !== null && c.latitude !== undefined && c.longitude !== undefined) {
+      document.getElementById("complaint-location").innerHTML = `
+        ${placePart}
+        ${addrPart}
+        <div style="font-size: 0.8rem; color: var(--text-light); margin-top: 0.2rem;">
+          Lat: ${c.latitude.toFixed(6)}, Lon: ${c.longitude.toFixed(6)}
+          <a href="https://www.google.com/maps?q=${c.latitude},${c.longitude}" target="_blank" rel="noopener noreferrer" style="font-size: 0.8rem; margin-left: 0.5rem; color: var(--primary-blue); font-weight: 600;">View on Map ↗</a>
+        </div>
+      `;
+    } else if (placePart || addrPart) {
+      document.getElementById("complaint-location").innerHTML = `${placePart} ${addrPart}`;
+    } else {
+      document.getElementById("complaint-location").textContent = "GPS coordinates not provided";
+    }
+
+    // Created At & Language
+    document.getElementById("complaint-created-at").textContent = new Date(c.created_at).toLocaleString();
+    const langNames = { en: "English", ta: "Tamil (தமிழ்)", hi: "Hindi (हिन्दी)" };
+    document.getElementById("complaint-language").textContent = langNames[c.original_language] || c.original_language;
+    // Complainant (Citizen) Info
+    const citizenEl = document.getElementById("complaint-citizen");
+    if (citizenEl) {
+      if (c.citizen_name) {
+        citizenEl.innerHTML = `<strong>${escapeHtml(c.citizen_name)}</strong>${c.citizen_email ? `<br><small style="color:var(--text-light);">${escapeHtml(c.citizen_email)}</small>` : ''}`;
+      } else {
+        citizenEl.textContent = "Anonymous Citizen";
+      }
+    }
+
+    // Description (preserved citizen text)
+    document.getElementById("complaint-description").textContent = c.original_text || c.description || "(No description provided)";
+
+    // Duplicate warnings
+    const dupCard = document.getElementById("duplicate-warning-card");
+    const dupList = document.getElementById("duplicate-candidates-list");
+    dupList.innerHTML = "";
+    if (c.possible_duplicates && c.possible_duplicates.length > 0) {
+      dupCard.style.display = "block";
+      c.possible_duplicates.forEach((cand) => {
+        const item = document.createElement("div");
+        item.style.background = "#ffffff";
+        item.style.padding = "0.75rem";
+        item.style.borderRadius = "var(--radius-sm)";
+        item.style.border = "1px solid #fcd34d";
+        item.style.fontSize = "0.85rem";
+        item.innerHTML = `
+          <div style="font-weight: 700; color: var(--primary-navy);">
+            Complaint ID: <a href="/officer/complaints/${encodeURIComponent(cand.complaint_id)}" style="color: var(--primary-blue);">${cand.complaint_id}</a>
+            <span class="badge" style="background: #fef3c7; color: #92400e; margin-left: 0.5rem;">Similarity: ${(cand.duplicate_score * 100).toFixed(0)}%</span>
+            <span class="badge" style="background: #f1f5f9; color: #334155; margin-left: 0.25rem;">Status: ${cand.status}</span>
+          </div>
+          <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.2rem;">
+            Issue: ${tIssue(cand.issue_type)} | Logged: ${new Date(cand.created_at).toLocaleDateString()}
+          </div>
+        `;
+        dupList.appendChild(item);
+      });
+    } else {
+      dupCard.style.display = "none";
+    }
+
+    // AI Info
+    const aiPanel = document.getElementById("ai-info-panel");
+    if (c.ai_confidence !== null && c.ai_confidence !== undefined) {
+      aiPanel.innerHTML = `
+        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+          <div><strong>Detected Class:</strong> ${c.ai_detected_issue ? tIssue(c.ai_detected_issue) : tIssue(c.issue_type)}</div>
+          <div><strong>Confidence:</strong> <span class="badge" style="background: #e0f2fe; color: #0369a1;">${(c.ai_confidence * 100).toFixed(1)}%</span></div>
+          <div><strong>Severity Assessment:</strong> ${tSeverity(c.severity)}</div>
+        </div>
+      `;
+    } else {
+      aiPanel.innerHTML = `
+        <div style="color: var(--text-muted); font-size: 0.9rem;">
+          ℹ️ <strong>AI Model Status:</strong> No trained production AI model is currently active for automatic inference on this complaint.
+          <br><span style="font-size: 0.8rem; color: var(--text-light);">Manual category verification and human officer workflow are active.</span>
+        </div>
+      `;
+    }
+
+    // Evidence Gallery
+    const gallery = document.getElementById("evidence-gallery");
+    const noEvNotice = document.getElementById("no-evidence-notice");
+    gallery.innerHTML = "";
+    if (c.evidences && c.evidences.length > 0) {
+      noEvNotice.style.display = "none";
+      c.evidences.forEach((ev) => {
+        const item = document.createElement("div");
+        item.style.border = "1px solid var(--border-color)";
+        item.style.borderRadius = "var(--radius-sm)";
+        item.style.padding = "0.75rem";
+        item.style.background = "#f8fafc";
+        item.style.maxWidth = "280px";
+
+        const fType = ev.file_type || "";
+        const isImage = fType.startsWith("image/");
+        const isVideo = fType.startsWith("video/");
+        const isAudio = fType.startsWith("audio/");
+
+        let mediaHtml = "";
+        if (isImage) {
+          mediaHtml = `<img src="/${ev.file_path}" alt="Evidence" style="max-width: 100%; height: 160px; object-fit: cover; border-radius: 4px;">`;
+        } else if (isVideo) {
+          mediaHtml = `<video src="/${ev.file_path}" controls style="max-width: 100%; height: 160px;"></video>`;
+        } else if (isAudio) {
+          mediaHtml = `<audio src="/${ev.file_path}" controls style="width: 100%; margin: 1rem 0;"></audio>`;
+        } else {
+          mediaHtml = `<div style="padding: 1rem; background: #e2e8f0; border-radius: 4px; font-size: 0.8rem; color: #475569;">Attachment (${escapeHtml(fType || 'unknown')})</div>`;
+        }
+
+        const shaDisplay = ev.sha256_hash ? `${ev.sha256_hash.substring(0, 20)}...` : 'Pending';
+
+        item.innerHTML = `
+          ${mediaHtml}
+          <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.5rem; word-break: break-all;">
+            <strong>SHA-256:</strong> ${escapeHtml(shaDisplay)}
+          </div>
+        `;
+        gallery.appendChild(item);
+      });
+    } else {
+      noEvNotice.style.display = "block";
+    }
+
+    // Status Action Toolbar
+    renderStatusActions(c);
+
+    // AI-Assisted Resolution Verification (Step 9)
+    renderResolutionVerification(c);
+
+    // Blockchain Integrity Trail (Step 10)
+    renderBlockchainTrail(c);
+
+
+    // Resolution section
+    const resPanel = document.getElementById("resolution-panel");
+    const resSummary = document.getElementById("resolution-summary-box");
+    if (c.status === "RESOLVED" || (c.resolution && c.resolution.resolved_at)) {
+      resPanel.style.display = "none";
+      resSummary.style.display = "block";
+      document.getElementById("resolution-text").textContent = `"${c.resolution ? c.resolution.resolution_notes : "Grievance resolved."}"`;
+      const resDate = c.resolution && c.resolution.resolved_at ? new Date(c.resolution.resolved_at).toLocaleString() : "";
+      const resBy = c.resolution && c.resolution.resolved_by_name ? ` by ${c.resolution.resolved_by_name}` : "";
+      document.getElementById("resolution-meta").textContent = `Resolved on ${resDate}${resBy}. Full audit record committed to database.`;
+    } else {
+      resPanel.style.display = "block";
+      resSummary.style.display = "none";
+    }
+
+    // Officer Notes
+    renderOfficerNotes(c.notes || []);
+
+    // Status Timeline
+    renderStatusTimeline(c.status_history || []);
+
+    // Render Coimbatore Map & Satellite view
+    renderOfficerMap(c);
+  }
+
+  function renderStatusActions(c) {
+    const toolbar = document.getElementById("status-action-toolbar");
+    toolbar.innerHTML = "";
+
+    const currentSt = (c.status || "").toUpperCase();
+
+    // Map allowed transitions based on canonical state machine
+    const transitions = {
+      SUBMITTED: [
+        { status: "VERIFIED", label: "✓ Confirm & Verify Grievance", class: "btn-teal" },
+        { status: "DEPARTMENT_ASSIGNED", label: "Acknowledge & Assign to Dept", class: "btn-secondary" },
+        { status: "NEEDS_HUMAN_REVIEW", label: "Flag for Human Review", class: "btn-secondary" },
+        { status: "REJECTED", label: "✕ Reject Grievance", class: "btn-secondary" },
+      ],
+      AI_VERIFIED: [
+        { status: "VERIFIED", label: "✓ Confirm Officer Verification", class: "btn-teal" },
+        { status: "DEPARTMENT_ASSIGNED", label: "Assign to Dept", class: "btn-secondary" },
+        { status: "IN_PROGRESS", label: "Start Field Work (In Progress)", class: "btn-primary" },
+        { status: "NEEDS_HUMAN_REVIEW", label: "Flag for Human Review", class: "btn-secondary" },
+        { status: "REJECTED", label: "✕ Reject Grievance", class: "btn-secondary" },
+      ],
+      VERIFIED: [
+        { status: "DEPARTMENT_ASSIGNED", label: "Assign to Dept", class: "btn-secondary" },
+        { status: "IN_PROGRESS", label: "Start Field Work (In Progress)", class: "btn-primary" },
+        { status: "REJECTED", label: "✕ Reject Grievance", class: "btn-secondary" },
+      ],
+      DEPARTMENT_ASSIGNED: [
+        { status: "VERIFIED", label: "✓ Verify Grievance", class: "btn-teal" },
+        { status: "IN_PROGRESS", label: "Start Field Work (In Progress)", class: "btn-primary" },
+        { status: "NEEDS_HUMAN_REVIEW", label: "Flag for Review", class: "btn-secondary" },
+        { status: "REJECTED", label: "✕ Reject Grievance", class: "btn-secondary" },
+      ],
+      ASSIGNED: [
+        { status: "VERIFIED", label: "✓ Verify Grievance", class: "btn-teal" },
+        { status: "IN_PROGRESS", label: "Start Field Work (In Progress)", class: "btn-primary" },
+        { status: "NEEDS_HUMAN_REVIEW", label: "Flag for Review", class: "btn-secondary" },
+        { status: "REJECTED", label: "✕ Reject Grievance", class: "btn-secondary" },
+      ],
+      IN_PROGRESS: [
+        { status: "NEEDS_HUMAN_REVIEW", label: "Flag for Special Review", class: "btn-secondary" },
+        { status: "REJECTED", label: "✕ Reject Grievance", class: "btn-secondary" },
+      ],
+      NEEDS_HUMAN_REVIEW: [
+        { status: "VERIFIED", label: "✓ Verify Grievance", class: "btn-teal" },
+        { status: "DEPARTMENT_ASSIGNED", label: "Re-assign to Dept", class: "btn-secondary" },
+        { status: "IN_PROGRESS", label: "Resume Field Work (In Progress)", class: "btn-primary" },
+        { status: "REJECTED", label: "✕ Reject Grievance", class: "btn-secondary" },
+      ],
+      RESOLVED: [],
+      REJECTED: [],
+    };
+
+    const allowed = transitions[currentSt] || [];
+
+    if (allowed.length === 0) {
+      if (currentSt === "RESOLVED") {
+        toolbar.innerHTML = `<span style="color: var(--success-green); font-size: 0.9rem; font-weight: 600;">✓ This grievance is RESOLVED. Terminal status reached.</span>`;
+      } else {
+        toolbar.innerHTML = `<span style="color: var(--text-light); font-size: 0.85rem;">No further direct status changes allowed from current status: ${currentSt}.</span>`;
+      }
+      return;
+    }
+
+    allowed.forEach((item) => {
+      const btn = document.createElement("button");
+      btn.className = `btn ${item.class}`;
+      btn.style.minHeight = "38px";
+      btn.style.fontSize = "0.85rem";
+      btn.textContent = item.label;
+      btn.addEventListener("click", () => openStatusModal(item.status));
+      toolbar.appendChild(btn);
+    });
+  }
+
+  function openStatusModal(nextStatus) {
+    targetModalStatus = nextStatus;
+    document.getElementById("modal-target-status").textContent = tStatus(nextStatus);
+    document.getElementById("modal-status-note").value = "";
+    const modal = document.getElementById("status-modal");
+    modal.style.display = "flex";
+  }
+
+  document.getElementById("btn-cancel-modal").addEventListener("click", () => {
+    document.getElementById("status-modal").style.display = "none";
+    targetModalStatus = null;
+  });
+
+  document.getElementById("btn-confirm-status").addEventListener("click", async () => {
+    if (!targetModalStatus) return;
+    const note = document.getElementById("modal-status-note").value.trim();
+
+    try {
+      await ApiClient.updateOfficerComplaintStatus(complaintId, targetModalStatus, note || null);
+      document.getElementById("status-modal").style.display = "none";
+      targetModalStatus = null;
+      loadComplaint();
+    } catch (err) {
+      alert(`Status Update Failed: ${err.message}`);
+    }
+  });
+
+  // Resolve Handler
+  document.getElementById("btn-submit-resolution").addEventListener("click", async () => {
+    const note = document.getElementById("resolution-note-input").value.trim();
+    if (!note || note.length < 3) {
+      alert("Please provide an official resolution note describing the actions taken.");
+      return;
+    }
+
+    const fileInput = document.getElementById("resolution-evidence-file");
+    const hasFile = fileInput.files && fileInput.files.length > 0;
+
+    try {
+      // 1. Upload resolution proof if provided
+      if (hasFile) {
+        await ApiClient.uploadResolutionEvidence(complaintId, fileInput.files[0]);
+      }
+
+      // 2. Submit resolution note & transition to RESOLVED
+      await ApiClient.resolveOfficerComplaint(complaintId, note);
+      alert("Complaint successfully marked as RESOLVED.");
+      loadComplaint();
+    } catch (err) {
+      alert(`Resolution Failed: ${err.message}`);
+    }
+  });
+
+  // Add Note Handler
+  document.getElementById("btn-add-note").addEventListener("click", async () => {
+    const note = document.getElementById("new-note-input").value.trim();
+    if (!note) {
+      alert("Please enter a note before submitting.");
+      return;
+    }
+
+    try {
+      await ApiClient.addOfficerNote(complaintId, note);
+      document.getElementById("new-note-input").value = "";
+      loadComplaint();
+    } catch (err) {
+      alert(`Failed to add note: ${err.message}`);
+    }
+  });
+
+  // ----------------------------------------------------
+  // STEP 9: AI-Assisted Resolution Verification Rendering
+  // ----------------------------------------------------
+  function renderResolutionVerification(c) {
+    const beforePreview = document.getElementById("verification-before-preview");
+    const afterPreview = document.getElementById("verification-after-preview");
+    const beforeInfo = document.getElementById("verification-before-info");
+    const afterInfo = document.getElementById("verification-after-info");
+    const badgeContainer = document.getElementById("verification-status-badge-container");
+    const detailsPanel = document.getElementById("verification-details-panel");
+    const humanReviewBox = document.getElementById("verification-human-review-box");
+    const btnRunVer = document.getElementById("btn-run-verification");
+
+    // Identify latest citizen original image and officer resolution image
+    let beforeEv = null;
+    let afterEv = null;
+
+    if (c.evidences && c.evidences.length > 0) {
+      for (const ev of c.evidences) {
+        const isImg = ev.file_type && ev.file_type.startsWith("image/");
+        if (isImg) {
+          if (ev.is_resolution && !afterEv) {
+            afterEv = ev;
+          } else if (!ev.is_resolution && !beforeEv) {
+            beforeEv = ev;
+          }
+        }
+      }
+    }
+
+    // Render Before Preview
+    if (beforeEv) {
+      beforePreview.innerHTML = `<img src="/${beforeEv.file_path}" alt="Before Evidence" style="width: 100%; height: 200px; object-fit: cover; border-radius: 4px;">`;
+      beforeInfo.textContent = `Evidence #${beforeEv.id} • ${new Date(beforeEv.created_at).toLocaleString()}`;
+    } else {
+      beforePreview.innerHTML = `<div style="padding: 2.5rem 1rem; text-align: center; color: var(--text-light); font-size: 0.85rem;">No compatible original image evidence attached.</div>`;
+      beforeInfo.textContent = "";
+    }
+
+    // Render After Preview
+    if (afterEv) {
+      afterPreview.innerHTML = `<img src="/${afterEv.file_path}" alt="After Evidence" style="width: 100%; height: 200px; object-fit: cover; border-radius: 4px;">`;
+      afterInfo.textContent = `Resolution Evidence #${afterEv.id} • ${new Date(afterEv.created_at).toLocaleString()}`;
+    } else {
+      afterPreview.innerHTML = `<div style="padding: 2.5rem 1rem; text-align: center; color: var(--text-light); font-size: 0.85rem;">No resolution image uploaded yet.</div>`;
+      afterInfo.textContent = "";
+    }
+
+    const ver = c.latest_verification;
+    if (!ver) {
+      badgeContainer.innerHTML = `<span class="badge" style="background: #f1f5f9; color: #475569; font-size: 0.85rem; padding: 0.35rem 0.75rem;">PENDING ANALYSIS</span>`;
+      detailsPanel.style.display = "none";
+      humanReviewBox.style.display = "none";
+      return;
+    }
+
+    // Status Badge
+    let badgeStyle = "background: #f1f5f9; color: #475569;";
+    let statusLabel = ver.verification_status;
+    if (ver.verification_status === "AI_VERIFIED") {
+      badgeStyle = "background: #dcfce7; color: #166534;";
+      statusLabel = "AI VERIFIED";
+    } else if (ver.verification_status === "NEEDS_HUMAN_REVIEW") {
+      badgeStyle = "background: #fef3c7; color: #92400e;";
+      statusLabel = "NEEDS HUMAN REVIEW";
+    } else if (ver.verification_status === "VERIFICATION_FAILED") {
+      badgeStyle = "background: #fee2e2; color: #991b1b;";
+      statusLabel = "VERIFICATION FAILED";
+    } else if (ver.verification_status === "VERIFICATION_NOT_AVAILABLE") {
+      badgeStyle = "background: #e2e8f0; color: #475569;";
+      statusLabel = "VERIFICATION NOT AVAILABLE";
+    }
+    badgeContainer.innerHTML = `<span class="badge" style="${badgeStyle} font-size: 0.85rem; padding: 0.35rem 0.75rem; font-weight: 700;">${statusLabel}</span>`;
+
+    // Details Panel
+    detailsPanel.style.display = "block";
+    document.getElementById("verification-algo-version").textContent = ver.algorithm_version || "resolution-v1";
+    document.getElementById("verification-score-badge").textContent = (ver.verification_score !== null && ver.verification_score !== undefined) ? ver.verification_score.toFixed(2) : "N/A";
+    document.getElementById("verification-alignment-badge").textContent = ver.alignment_status || "NOT_AVAILABLE";
+    document.getElementById("verification-reason-text").textContent = ver.verification_reason || "Verification evaluation completed.";
+
+    // Metrics
+    if (ver.metrics) {
+      document.getElementById("metric-ssim").textContent = (ver.metrics.structural_similarity !== null && ver.metrics.structural_similarity !== undefined) ? ver.metrics.structural_similarity.toFixed(4) : "—";
+      document.getElementById("metric-pixeldiff").textContent = (ver.metrics.pixel_difference !== null && ver.metrics.pixel_difference !== undefined) ? ver.metrics.pixel_difference.toFixed(4) : "—";
+      document.getElementById("metric-edgesim").textContent = (ver.metrics.edge_similarity !== null && ver.metrics.edge_similarity !== undefined) ? ver.metrics.edge_similarity.toFixed(4) : "—";
+      document.getElementById("metric-histsim").textContent = (ver.metrics.histogram_similarity !== null && ver.metrics.histogram_similarity !== undefined) ? ver.metrics.histogram_similarity.toFixed(4) : "—";
+      document.getElementById("metric-phash").textContent = (ver.metrics.perceptual_hash_distance !== null && ver.metrics.perceptual_hash_distance !== undefined) ? `${ver.metrics.perceptual_hash_distance} / 64` : "—";
+    } else {
+      document.getElementById("metric-ssim").textContent = "—";
+      document.getElementById("metric-pixeldiff").textContent = "—";
+      document.getElementById("metric-edgesim").textContent = "—";
+      document.getElementById("metric-histsim").textContent = "—";
+      document.getElementById("metric-phash").textContent = "—";
+    }
+
+    // Human Review Panel
+    if (ver.review_decision) {
+      humanReviewBox.style.display = "block";
+      const isApproved = ver.review_decision === "APPROVED";
+      const boxBg = isApproved ? "#f0fdf4" : "#fef2f2";
+      const boxBorder = isApproved ? "#86efac" : "#fca5a5";
+      const icon = isApproved ? "✅" : "❌";
+      const titleColor = isApproved ? "#166534" : "#991b1b";
+
+      humanReviewBox.style.background = boxBg;
+      humanReviewBox.style.border = `1px solid ${boxBorder}`;
+      humanReviewBox.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+          <span style="font-size: 1.1rem;">${icon}</span>
+          <strong style="color: ${titleColor}; font-size: 0.95rem;">Officer Review: ${ver.review_decision}</strong>
+          <span style="font-size: 0.75rem; color: var(--text-light); margin-left: auto;">${ver.reviewed_at ? new Date(ver.reviewed_at).toLocaleString() : ""}</span>
+        </div>
+        <div style="font-size: 0.85rem; color: var(--text-main); margin-bottom: 0.25rem;">
+          <strong>Reviewer:</strong> ${ver.reviewer_name || "Authorized Officer"}
+        </div>
+        <div style="font-size: 0.85rem; color: var(--text-muted); background: #ffffff; padding: 0.5rem 0.75rem; border-radius: 4px; border: 1px solid var(--border-color); font-style: italic;">
+          "${ver.review_notes || ""}"
+        </div>
+      `;
+    } else if (ver.verification_status === "NEEDS_HUMAN_REVIEW") {
+      humanReviewBox.style.display = "block";
+      humanReviewBox.style.background = "#fffbeb";
+      humanReviewBox.style.border = "1px solid #fcd34d";
+      humanReviewBox.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <span style="font-size: 1.2rem;">⚠️</span>
+          <strong style="color: #92400e; font-size: 0.95rem;">Officer Human Review Required</strong>
+        </div>
+        <p style="font-size: 0.85rem; color: #78350f; margin: 0 0 0.75rem 0;">
+          The automated computer vision algorithm determined visual evidence is inconclusive or shows partial change. Inspect the before/after images and record your human decision:
+        </p>
+        <div style="margin-bottom: 0.75rem;">
+          <label style="font-size: 0.8rem; font-weight: 600; color: #92400e; display: block; margin-bottom: 0.25rem;">
+            Officer Review Notes (Mandatory) *
+          </label>
+          <textarea id="officer-review-notes-input" class="form-control" rows="2" placeholder="e.g. Visually confirmed road surface repaving matches the pothole location." style="width: 100%; font-size: 0.85rem;"></textarea>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+          <button id="btn-approve-review" class="btn btn-primary" style="background: var(--success-green); border-color: var(--success-green); min-height: 34px; padding: 0.25rem 1rem; font-size: 0.85rem;">
+            ✓ Approve Resolution
+          </button>
+          <button id="btn-reject-review" class="btn btn-secondary" style="background: #ef4444; border-color: #ef4444; color: #ffffff; min-height: 34px; padding: 0.25rem 1rem; font-size: 0.85rem;">
+            ✗ Reject Resolution
+          </button>
+        </div>
+      `;
+
+      document.getElementById("btn-approve-review").addEventListener("click", () => handleHumanReview("APPROVED"));
+      document.getElementById("btn-reject-review").addEventListener("click", () => handleHumanReview("REJECTED"));
+    } else {
+      humanReviewBox.style.display = "none";
+    }
+  }
+
+  async function handleHumanReview(decision) {
+    const notesInput = document.getElementById("officer-review-notes-input");
+    const notes = notesInput ? notesInput.value.trim() : "";
+    if (!notes || notes.length < 5) {
+      alert("Please provide detailed officer review notes (at least 5 characters).");
+      return;
+    }
+
+    try {
+      await ApiClient.reviewResolutionVerification(complaintId, decision, notes);
+      alert(`Human review successfully recorded: ${decision}`);
+      loadComplaint();
+    } catch (err) {
+      alert(`Failed to record review: ${err.message}`);
+    }
+  }
+
+  // Run Verification Button
+  document.getElementById("btn-run-verification").addEventListener("click", async () => {
+    const btn = document.getElementById("btn-run-verification");
+    const loadingText = document.getElementById("verification-loading-text");
+
+    btn.disabled = true;
+    loadingText.style.display = "inline";
+
+    try {
+      await ApiClient.runResolutionVerification(complaintId);
+      loadComplaint();
+    } catch (err) {
+      alert(`Verification Failed: ${err.message}`);
+    } finally {
+      btn.disabled = false;
+      loadingText.style.display = "none";
+    }
+  });
+
+  // Direct Resolution Photo Upload
+  document.getElementById("btn-upload-resolution-direct").addEventListener("click", async () => {
+    const fileInput = document.getElementById("direct-resolution-file");
+    if (!fileInput.files || fileInput.files.length === 0) {
+      alert("Please select an image file to upload as resolution evidence.");
+      return;
+    }
+
+    try {
+      await ApiClient.uploadResolutionEvidence(complaintId, fileInput.files[0]);
+      alert("Resolution evidence image uploaded successfully.");
+      fileInput.value = "";
+      loadComplaint();
+    } catch (err) {
+      alert(`Upload Failed: ${err.message}`);
+    }
+  });
+
+  function renderOfficerNotes(notes) {
+    const container = document.getElementById("officer-notes-container");
+    const noNotes = document.getElementById("no-notes-notice");
+    container.innerHTML = "";
+
+    if (!notes || notes.length === 0) {
+      noNotes.style.display = "block";
+      return;
+    }
+
+    noNotes.style.display = "none";
+    notes.forEach((n) => {
+      const card = document.createElement("div");
+      card.style.background = "#f8fafc";
+      card.style.border = "1px solid var(--border-color)";
+      card.style.borderRadius = "var(--radius-sm)";
+      card.style.padding = "0.85rem 1rem";
+      card.style.marginBottom = "0.75rem";
+
+      const dateStr = new Date(n.created_at).toLocaleString();
+      card.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+          <strong style="color: var(--primary-navy); font-size: 0.85rem;">👤 ${n.author_name || "Officer"}</strong>
+          <span style="font-size: 0.75rem; color: var(--text-light);">${dateStr}</span>
+        </div>
+        <div style="font-size: 0.9rem; color: var(--text-main); white-space: pre-wrap;">${n.note}</div>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  function renderStatusTimeline(history) {
+    const timeline = document.getElementById("status-timeline");
+    timeline.innerHTML = "";
+
+    if (!history || history.length === 0) {
+      timeline.innerHTML = `<li style="color: var(--text-light); font-size: 0.85rem;">No history records found.</li>`;
+      return;
+    }
+
+    history.forEach((h) => {
+      const li = document.createElement("li");
+      li.className = "timeline-item";
+      const dateStr = new Date(h.created_at).toLocaleString();
+      const statusDisp = tStatus(h.new_status);
+
+      li.innerHTML = `
+        <div class="timeline-badge"></div>
+        <div class="timeline-content">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.5rem;">
+            <strong style="color: var(--primary-navy); font-size: 0.95rem;">${statusDisp}</strong>
+            <span style="font-size: 0.75rem; color: var(--text-light);">${dateStr}</span>
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+            ${h.remarks || "Status updated."}
+          </div>
+        </div>
+      `;
+      timeline.appendChild(li);
+    });
+  }
+
+  async function renderBlockchainTrail(complaint) {
+    const container = document.getElementById("blockchain-anchors-list");
+    const grid = document.getElementById("blockchain-milestones-grid");
+    const statusPill = document.getElementById("blockchain-status-pill");
+    const countBadge = document.getElementById("anchors-count-badge");
+
+    try {
+      let data;
+      if (window.ApiClient && typeof window.ApiClient.getBlockchainRecords === 'function') {
+        data = await window.ApiClient.getBlockchainRecords(complaint.complaint_id);
+      } else {
+        const res = await fetch(`/api/v1/blockchain/complaints/${encodeURIComponent(complaint.complaint_id)}`);
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody.detail || `Server returned ${res.status}`);
+        }
+        data = await res.json();
+      }
+      const records = (data && data.records) ? data.records : (Array.isArray(data) ? data : []);
+
+      countBadge.textContent = `${records.length} Anchors`;
+
+      const milestoneMap = {
+        COMPLAINT_CREATED: null,
+        COMPLAINT_STATUS_CHANGED: null,
+        RESOLUTION_EVIDENCE_ADDED: null,
+        RESOLUTION_VERIFICATION: null,
+        HUMAN_RESOLUTION_REVIEW: null,
+      };
+
+      records.forEach(r => {
+        milestoneMap[r.event_type] = r;
+      });
+
+      const milestoneLabels = [
+        { key: "COMPLAINT_CREATED", title: "Complaint Created" },
+        { key: "COMPLAINT_STATUS_CHANGED", title: "Status Changes" },
+        { key: "RESOLUTION_EVIDENCE_ADDED", title: "Resolution Evidence" },
+        { key: "RESOLUTION_VERIFICATION", title: "AI Verification" },
+        { key: "HUMAN_RESOLUTION_REVIEW", title: "Human Review" },
+      ];
+
+      grid.innerHTML = milestoneLabels.map(m => {
+        const rec = milestoneMap[m.key];
+        let pillColor = "#f1f5f9";
+        let textColor = "#64748b";
+        let statusText = "NOT REACHED";
+        let txShort = "";
+
+        if (rec) {
+          if (rec.status === "CONFIRMED") {
+            pillColor = "#d1fae5";
+            textColor = "#065f46";
+            statusText = "CONFIRMED";
+            txShort = rec.transaction_hash ? `Tx: ${rec.transaction_hash.slice(0, 8)}...` : "";
+          } else if (rec.status === "FAILED") {
+            pillColor = "#fee2e2";
+            textColor = "#991b1b";
+            statusText = "FAILED";
+          } else {
+            pillColor = "#fef3c7";
+            textColor = "#92400e";
+            statusText = rec.status;
+          }
+        }
+
+        return `
+          <div style="background: ${pillColor}; border-radius: 6px; padding: 0.6rem 0.8rem; border: 1px solid rgba(0,0,0,0.05);">
+            <div style="font-size: 0.75rem; font-weight: 700; color: ${textColor}; text-transform: uppercase;">${escapeHtml(m.title)}</div>
+            <div style="font-weight: 800; font-size: 0.85rem; color: ${textColor}; margin-top: 0.2rem;">${escapeHtml(statusText)}</div>
+            ${txShort ? `<div style="font-family: monospace; font-size: 0.7rem; color: #0284c7; margin-top: 0.2rem;">${escapeHtml(txShort)}</div>` : ""}
+          </div>
+        `;
+      }).join("");
+
+      if (records.length === 0) {
+        statusPill.innerHTML = `<span class="badge" style="background: #f1f5f9; color: #64748b;">NO ANCHORS YET</span>`;
+        container.innerHTML = `<div style="color: #64748b; font-size: 0.85rem; padding: 0.75rem 0;">No blockchain records yet.</div>`;
+        return;
+      }
+
+      const hasConfirmed = records.some(r => r.status === "CONFIRMED");
+      if (hasConfirmed) {
+        statusPill.innerHTML = `<span class="badge" style="background: #d1fae5; color: #065f46; font-weight: 700;">BLOCKCHAIN CONFIRMED (${records.length} Anchors)</span>`;
+      } else {
+        statusPill.innerHTML = `<span class="badge" style="background: #fef3c7; color: #92400e; font-weight: 700;">DATABASE-ANCHORED AUDIT TRAIL (${records.length} Records)</span>`;
+      }
+
+      container.innerHTML = records.map(r => {
+        let badgeBg = "#f1f5f9";
+        let badgeCol = "#475569";
+        let statusLabel = r.status || "LOGGED";
+        if (r.status === "CONFIRMED") {
+          badgeBg = "#d1fae5";
+          badgeCol = "#065f46";
+          statusLabel = "CONFIRMED";
+        } else if (r.status === "NOT_CONFIGURED") {
+          badgeBg = "#fef3c7";
+          badgeCol = "#92400e";
+          statusLabel = "DB LOGGED";
+        } else if (r.status === "FAILED") {
+          badgeBg = "#fee2e2";
+          badgeCol = "#991b1b";
+          statusLabel = "FAILED";
+        }
+
+        return `
+          <div style="background: white; border-radius: 4px; padding: 0.5rem 0.75rem; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+              <span style="font-weight: 700; font-family: monospace; color: #1e3a8a;">${escapeHtml(r.event_type || '')}</span>
+              <span style="font-size: 0.75rem; color: #64748b; margin-left: 0.5rem;">${r.created_at ? new Date(r.created_at).toLocaleTimeString() : ''}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem; font-family: monospace; font-size: 0.75rem;">
+              <span style="color: #0284c7;" title="${escapeHtml(r.transaction_hash || '')}">${r.transaction_hash ? escapeHtml(r.transaction_hash.slice(0, 12)) + '...' : 'SHA-256 Verified in DB'}</span>
+              <span class="badge" style="background: ${badgeBg}; color: ${badgeCol}; font-size: 0.7rem;">${escapeHtml(statusLabel)}</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+    } catch (err) {
+      console.warn("Blockchain trail query error:", err);
+      statusPill.innerHTML = `<span class="badge" style="background: #fee2e2; color: #991b1b;">QUERY FAILED</span>`;
+      container.innerHTML = `<div style="color: #dc2626; font-size: 0.85rem; padding: 0.5rem 0;">Failed to load blockchain audit trail: ${escapeHtml(err.message || 'Unable to connect to blockchain service')}</div>`;
+    }
+  }
+
+  // ================= COIMBATORE SATELLITE MAP CONTROLLER =================
+  let officerMapInstance = null;
+  let officerSatLayer = null;
+  let officerOsmLayer = null;
+  let officerMapMode = "satellite";
+
+  async function renderOfficerMap(c) {
+    const mapEl = document.getElementById("officer-complaint-map");
+    if (!mapEl || typeof L === "undefined") return;
+
+    const lat = c.latitude !== null && c.latitude !== undefined ? c.latitude : 11.0168;
+    const lon = c.longitude !== null && c.longitude !== undefined ? c.longitude : 76.9558;
+
+    const addrEl = document.getElementById("officer-map-address");
+    if (addrEl) {
+      addrEl.textContent = c.address ? `Reported Address: ${c.address}` : "Reported Location: Coimbatore Municipal Corporation";
+    }
+
+    const coordsBadge = document.getElementById("officer-coords-badge");
+    if (coordsBadge) {
+      coordsBadge.textContent = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`;
+    }
+
+    if (officerMapInstance) {
+      officerMapInstance.setView([lat, lon], 14);
+      setTimeout(() => officerMapInstance.invalidateSize(), 150);
+      return;
+    }
+
+    officerMapInstance = L.map("officer-complaint-map", {
+      center: [lat, lon],
+      zoom: 14,
+      zoomControl: true,
+    });
+
+    officerSatLayer = L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      {
+        attribution: "Tiles &copy; Esri &mdash; High-Resolution Satellite Imagery",
+        maxZoom: 19,
+      }
+    );
+
+    officerOsmLayer = L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        attribution: "&copy; OpenStreetMap contributors",
+        maxZoom: 19,
+      }
+    );
+
+    officerSatLayer.addTo(officerMapInstance);
+    officerMapMode = "satellite";
+
+    // Add CCMC Boundary polygon
+    try {
+      const bRes = await fetch("/api/v1/complaints/boundary");
+      if (bRes.ok) {
+        const bData = await bRes.json();
+        if (bData.polygon) {
+          const latLngs = bData.polygon.map(coord => [coord[1], coord[0]]);
+          L.polygon(latLngs, {
+            color: "#2563eb",
+            weight: 2,
+            opacity: 0.85,
+            fillColor: "#3b82f6",
+            fillOpacity: 0.06,
+            dashArray: "4, 6",
+          }).addTo(officerMapInstance);
+        }
+      }
+    } catch (e) {
+      console.warn("Could not load boundary polygon:", e);
+    }
+
+    // Add complaint pin marker
+    const marker = L.marker([lat, lon]).addTo(officerMapInstance);
+    marker.bindPopup(`<b>${escapeHtml(c.complaint_id)}</b><br>${escapeHtml(c.issue_type_display || c.issue_type)}<br>${escapeHtml(c.address || "Coimbatore")}`).openPopup();
+
+    // Toggle layer buttons
+    const btnSat = document.getElementById("btn-officer-sat");
+    const btnOsm = document.getElementById("btn-officer-osm");
+    if (btnSat) {
+      btnSat.addEventListener("click", () => {
+        if (officerMapMode !== "satellite") {
+          officerMapInstance.removeLayer(officerOsmLayer);
+          officerSatLayer.addTo(officerMapInstance);
+          officerMapMode = "satellite";
+          btnSat.style.background = "#e0f2fe";
+          btnSat.style.color = "#0369a1";
+          btnSat.style.fontWeight = "700";
+          if (btnOsm) {
+            btnOsm.style.background = "";
+            btnOsm.style.color = "";
+            btnOsm.style.fontWeight = "";
+          }
+        }
+      });
+    }
+    if (btnOsm) {
+      btnOsm.addEventListener("click", () => {
+        if (officerMapMode !== "streets") {
+          officerMapInstance.removeLayer(officerSatLayer);
+          officerOsmLayer.addTo(officerMapInstance);
+          officerMapMode = "streets";
+          btnOsm.style.background = "#e0f2fe";
+          btnOsm.style.color = "#0369a1";
+          btnOsm.style.fontWeight = "700";
+          if (btnSat) {
+            btnSat.style.background = "";
+            btnSat.style.color = "";
+            btnSat.style.fontWeight = "";
+          }
+        }
+      });
+    }
+
+    setTimeout(() => officerMapInstance.invalidateSize(), 200);
+  }
+
+  document.getElementById("btn-refresh-detail").addEventListener("click", () => {
+    loadComplaint();
+  });
+
+  document.addEventListener("DOMContentLoaded", () => {
+    loadComplaint();
+  });
+</script>
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+{% endblock %}

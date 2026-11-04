@@ -1,0 +1,10 @@
+path: .
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: Garbage Overflow
+  1: Illegal Dumping
+  2: Pothole
+  3: Damaged Road

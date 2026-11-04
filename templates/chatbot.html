@@ -1,0 +1,449 @@
+{% extends "base.html" %}
+
+{% block title %}Civic AI Assistant — AI Civic Guardian{% endblock %}
+
+{% block content %}
+<div class="chatbot-wrapper" style="display: flex; gap: 1.5rem; max-width: 1200px; margin: 0 auto; height: calc(100vh - 160px); min-height: 600px;">
+  <!-- Left Sidebar: Conversations & Guidelines -->
+  <aside class="chatbot-sidebar" style="width: 300px; flex-shrink: 0; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+    <div style="padding: 1rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
+      <h3 style="margin: 0; font-size: 1rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 0.5rem;">
+        <span>🏛️</span> <span data-i18n="civic_conversations">Conversations</span>
+      </h3>
+      <button id="btn-new-chat" class="btn btn-sm btn-outline-primary" style="font-size: 0.8rem; padding: 0.3rem 0.6rem;" data-i18n="new_chat">+ New</button>
+    </div>
+
+    <!-- Conversation Thread List -->
+    <div id="conversation-list" style="flex: 1; overflow-y: auto; padding: 0.5rem;">
+      <div id="conv-loading" style="padding: 1rem; text-align: center; color: #64748b; font-size: 0.85rem;" data-i18n="loading_history">Loading history...</div>
+      <div id="conv-empty" style="display: none; padding: 1.5rem; text-align: center; color: #94a3b8; font-size: 0.85rem;">
+        <span style="font-size: 1.5rem; display: block; margin-bottom: 0.5rem;">💬</span>
+        <span data-i18n="no_previous_chats">No previous inquiries. Start asking questions below!</span>
+      </div>
+      <ul id="conv-items" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.35rem;"></ul>
+    </div>
+
+    <!-- Official Knowledge Base Notice -->
+    <div style="padding: 0.85rem 1rem; background: #f1f5f9; border-top: 1px solid #e2e8f0; font-size: 0.75rem; color: #475569;">
+      <p style="margin: 0 0 0.3rem 0; font-weight: 600; color: #0f172a;">🛡️ Grounded Retrieval Assurance</p>
+      <p style="margin: 0;">Answers are generated strictly from indexed municipal guidelines (CPHEEO, IRC, DARPG). No ungrounded hallucinations.</p>
+    </div>
+  </aside>
+
+  <!-- Right: Chat Canvas -->
+  <section class="chatbot-main" style="flex: 1; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+    <!-- Chat Header -->
+    <div style="padding: 1rem 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #ffffff;">
+      <div>
+        <h2 id="current-chat-title" style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #0f172a;">Civic AI Assistant</h2>
+        <p style="margin: 0.15rem 0 0 0; font-size: 0.8rem; color: #64748b;">Instant answers on municipal procedures, repair timelines, and grievance rights</p>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <!-- Chat Language Selector -->
+        <div style="display: flex; align-items: center; gap: 0.35rem;">
+          <label for="chat-language-select" style="font-size: 0.85rem; font-weight: 600; color: #475569;">🌐</label>
+          <select id="chat-language-select" class="form-control" style="font-size: 0.82rem; padding: 0.3rem 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1;">
+            <option value="en">English</option>
+            <option value="ta">தமிழ் (Tamil)</option>
+            <option value="hi">हिन्दी (Hindi)</option>
+          </select>
+        </div>
+
+        <button id="btn-clear-chat" class="btn btn-sm btn-outline-danger" style="font-size: 0.8rem; padding: 0.3rem 0.6rem;" title="Clear conversation">🗑️</button>
+      </div>
+    </div>
+
+    <!-- Messages Container -->
+    <div id="messages-container" style="flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; background: #fafafa;">
+      <!-- Welcome Empty State -->
+      <div id="welcome-message" style="margin: auto; max-width: 500px; text-align: center; padding: 2rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🏛️</div>
+        <h3 style="margin: 0 0 0.5rem 0; font-size: 1.2rem; color: #1e293b;">How can I assist you with civic services today?</h3>
+        <p style="margin: 0 0 1.25rem 0; font-size: 0.85rem; color: #64748b; line-height: 1.4;">Ask questions regarding road repairs, garbage overflow SLAs, water pipeline burst protocols, or municipal grievance redressal rules.</p>
+        
+        <div style="display: flex; flex-direction: column; gap: 0.5rem; text-align: left;">
+          <button class="sample-prompt-btn" data-query="What is the SLA timeline for clearing garbage overflow?">
+            🗑️ What is the SLA timeline for clearing garbage overflow?
+          </button>
+          <button class="sample-prompt-btn" data-query="How quickly must high-severity potholes on arterial roads be repaired?">
+            🚧 How quickly must high-severity potholes be repaired?
+          </button>
+          <button class="sample-prompt-btn" data-query="What department handles water pipeline bursts and what is the turnaround time?">
+            💧 What is the turnaround time for a water pipeline burst?
+          </button>
+          <button class="sample-prompt-btn" data-query="Can I reopen a resolved complaint if the repair was unsatisfactory?">
+            ⚖️ Can I reopen a resolved complaint if the repair was unsatisfactory?
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Loading Indicator -->
+    <div id="chat-loading-indicator" style="display: none; padding: 0.75rem 1.5rem; background: #fafafa; border-top: 1px solid #f1f5f9; align-items: center; gap: 0.6rem; color: #2563eb; font-size: 0.85rem;">
+      <span class="spinner" style="width: 16px; height: 16px; border: 2px solid #93c5fd; border-top-color: #2563eb; border-radius: 50%; display: inline-block; animation: spin 0.8s linear infinite;"></span>
+      <span>Retrieving official civic documents & synthesizing response...</span>
+    </div>
+
+    <!-- Input Form -->
+    <div style="padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; background: #ffffff;">
+      <form id="chat-form" style="display: flex; gap: 0.75rem;">
+        <input 
+          type="text" 
+          id="chat-input" 
+          placeholder="Ask a municipal service question in English, தமிழ், or हिन्दी..." 
+          class="form-control" 
+          style="flex: 1; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.95rem;" 
+          autocomplete="off" 
+          required 
+          maxlength="2000"
+        />
+        <button 
+          type="submit" 
+          id="btn-send-chat" 
+          class="btn btn-primary" 
+          style="padding: 0.75rem 1.5rem; font-weight: 600; display: flex; align-items: center; gap: 0.4rem; border-radius: 8px;"
+        >
+          <span>Send</span> <span>➤</span>
+        </button>
+      </form>
+    </div>
+  </section>
+</div>
+
+<style>
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.sample-prompt-btn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.82rem;
+  color: #334155;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.sample-prompt-btn:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.chat-bubble-user {
+  align-self: flex-end;
+  background: #2563eb;
+  color: #ffffff;
+  padding: 0.75rem 1rem;
+  border-radius: 14px 14px 2px 14px;
+  max-width: 75%;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  word-break: break-word;
+}
+
+.chat-bubble-assistant {
+  align-self: flex-start;
+  background: #ffffff;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+  padding: 0.9rem 1.1rem;
+  border-radius: 14px 14px 14px 2px;
+  max-width: 82%;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  word-break: break-word;
+}
+
+.chat-sources-box {
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed #cbd5e1;
+  font-size: 0.78rem;
+  color: #475569;
+}
+
+.source-item-pill {
+  display: inline-block;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  margin-top: 0.3rem;
+  margin-right: 0.4rem;
+  font-size: 0.75rem;
+  color: #0f172a;
+}
+.source-item-pill a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.conv-item-btn {
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.65rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: #334155;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+.conv-item-btn:hover {
+  background: #f1f5f9;
+}
+.conv-item-btn.active {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let activeConversationId = null;
+
+  document.addEventListener("DOMContentLoaded", () => {
+    // Sync language selector with global i18n
+    const langSelect = document.getElementById("chat-language-select");
+    const globalLang = localStorage.getItem("preferred_language") || "en";
+    if (langSelect) {
+      langSelect.value = globalLang;
+      langSelect.addEventListener("change", (e) => {
+        localStorage.setItem("preferred_language", e.target.value);
+        if (window.I18n) window.I18n.setLanguage(e.target.value);
+      });
+    }
+
+    loadConversations();
+
+    // Sample buttons
+    document.querySelectorAll(".sample-prompt-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const query = btn.getAttribute("data-query");
+        document.getElementById("chat-input").value = query;
+        document.getElementById("chat-form").dispatchEvent(new Event("submit"));
+      });
+    });
+
+    // Form submission
+    const form = document.getElementById("chat-form");
+    if (form) {
+      form.addEventListener("submit", handleChatSubmit);
+    }
+
+    // New chat button
+    const btnNew = document.getElementById("btn-new-chat");
+    if (btnNew) {
+      btnNew.addEventListener("click", () => {
+        activeConversationId = null;
+        document.getElementById("messages-container").innerHTML = `
+          <div id="welcome-message" style="margin: auto; max-width: 500px; text-align: center; padding: 2rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🏛️</div>
+            <h3 style="margin: 0 0 0.5rem 0; font-size: 1.2rem; color: #1e293b;">How can I assist you with civic services today?</h3>
+            <p style="margin: 0 0 1.25rem 0; font-size: 0.85rem; color: #64748b; line-height: 1.4;">Ask questions regarding road repairs, garbage overflow SLAs, water pipeline burst protocols, or municipal grievance redressal rules.</p>
+          </div>
+        `;
+        document.getElementById("current-chat-title").textContent = "Civic AI Assistant";
+        document.querySelectorAll(".conv-item-btn").forEach(b => b.classList.remove("active"));
+      });
+    }
+
+    // Clear chat button
+    const btnClear = document.getElementById("btn-clear-chat");
+    if (btnClear) {
+      btnClear.addEventListener("click", async () => {
+        if (!activeConversationId) return;
+        if (!confirm("Are you sure you want to delete this conversation thread?")) return;
+        try {
+          await ApiClient.fetch(`/api/v1/chatbot/conversations/${activeConversationId}`, { method: "DELETE" });
+          activeConversationId = null;
+          loadConversations();
+          document.getElementById("btn-new-chat").click();
+        } catch (err) {
+          alert("Failed to delete conversation: " + err.message);
+        }
+      });
+    }
+  });
+
+  async function loadConversations() {
+    const listEl = document.getElementById("conv-items");
+    const loadingEl = document.getElementById("conv-loading");
+    const emptyEl = document.getElementById("conv-empty");
+    if (!ApiClient.isAuthenticated()) {
+      loadingEl.style.display = "none";
+      emptyEl.style.display = "block";
+      emptyEl.textContent = "Please login to view saved conversations.";
+      return;
+    }
+
+    try {
+      const convs = await ApiClient.fetch("/api/v1/chatbot/conversations?limit=30");
+      loadingEl.style.display = "none";
+      if (!convs || convs.length === 0) {
+        emptyEl.style.display = "block";
+        listEl.innerHTML = "";
+        return;
+      }
+
+      emptyEl.style.display = "none";
+      listEl.innerHTML = "";
+      convs.forEach(c => {
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.className = "conv-item-btn" + (c.id === activeConversationId ? " active" : "");
+        btn.textContent = `💬 ${c.title}`;
+        btn.title = c.title;
+        btn.addEventListener("click", () => selectConversation(c.id, c.title));
+        li.appendChild(btn);
+        listEl.appendChild(li);
+      });
+    } catch (err) {
+      loadingEl.style.display = "none";
+      emptyEl.style.display = "block";
+      emptyEl.textContent = "Unable to load conversations.";
+    }
+  }
+
+  async function selectConversation(convId, title) {
+    activeConversationId = convId;
+    document.querySelectorAll(".conv-item-btn").forEach(b => b.classList.remove("active"));
+    const container = document.getElementById("messages-container");
+    container.innerHTML = `<div style="text-align: center; color: #64748b; padding: 2rem;">Loading messages...</div>`;
+    document.getElementById("current-chat-title").textContent = title;
+
+    try {
+      const data = await ApiClient.fetch(`/api/v1/chatbot/conversations/${convId}`);
+      container.innerHTML = "";
+      if (data.messages && data.messages.length > 0) {
+        data.messages.forEach(m => {
+          if (m.role === "user") {
+            appendMessage("user", m.original_text);
+          } else {
+            appendMessage("assistant", m.response_text, m.sources, m.retrieval_status);
+          }
+        });
+      }
+      loadConversations();
+    } catch (err) {
+      container.innerHTML = `<div class="alert alert-danger">Failed to load conversation history: ${err.message}</div>`;
+    }
+  }
+
+  async function handleChatSubmit(e) {
+    e.preventDefault();
+    const input = document.getElementById("chat-input");
+    const message = input.value.trim();
+    if (!message) return;
+
+    const langSelect = document.getElementById("chat-language-select");
+    const language = langSelect ? langSelect.value : "en";
+
+    // Remove welcome message if visible
+    const welcome = document.getElementById("welcome-message");
+    if (welcome) welcome.remove();
+
+    appendMessage("user", message);
+    input.value = "";
+
+    const loadingIndicator = document.getElementById("chat-loading-indicator");
+    loadingIndicator.style.display = "flex";
+
+    const container = document.getElementById("messages-container");
+    container.scrollTop = container.scrollHeight;
+
+    try {
+      const payload = {
+        message: message,
+        language: language,
+        conversation_id: activeConversationId,
+      };
+
+      const res = await ApiClient.fetch("/api/v1/chatbot/chat", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      loadingIndicator.style.display = "none";
+
+      if (res && res.answer) {
+        activeConversationId = res.conversation_id;
+        appendMessage("assistant", res.answer, res.sources, res.retrieval_status);
+        loadConversations();
+      } else {
+        appendMessage("assistant", "Received empty response from assistant.", [], "FAILED");
+      }
+    } catch (err) {
+      loadingIndicator.style.display = "none";
+      appendMessage("assistant", `Error: ${err.message || "Unable to reach civic assistant."}`, [], "FAILED");
+    } finally {
+      container.scrollTop = container.scrollHeight;
+    }
+  }
+
+  function appendMessage(role, text, sources = [], status = "SUCCESS") {
+    const container = document.getElementById("messages-container");
+    const div = document.createElement("div");
+
+    if (role === "user") {
+      div.className = "chat-bubble-user";
+      div.textContent = text;
+    } else {
+      div.className = "chat-bubble-assistant";
+      
+      let html = `<div style="white-space: pre-wrap;">${escapeHtml(text)}</div>`;
+
+      if (sources && sources.length > 0) {
+        html += `<div class="chat-sources-box">
+          <div style="font-weight: 700; color: #334155; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.35rem;">
+            <span>📚</span> <span>Official Sources & Reference Documents</span>
+          </div>
+          <div>`;
+        sources.forEach((s, idx) => {
+          const simPct = (s.similarity * 100).toFixed(1);
+          let linkHtml = escapeHtml(s.title);
+          if (s.url) {
+            linkHtml = `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.title)} ↗</a>`;
+          }
+          html += `<div class="source-item-pill">
+            <strong>[${idx + 1}]</strong> ${linkHtml} • <em>${escapeHtml(s.source || "Official Standard")}</em> (Page ${s.page}) • Match: ${simPct}%
+          </div>`;
+        });
+        html += `</div></div>`;
+      } else if (status === "NO_RELEVANT_CONTEXT") {
+        html += `<div style="margin-top: 0.5rem; font-size: 0.78rem; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 0.35rem 0.6rem; border-radius: 4px;">
+          ⚠️ <em>No high-confidence match found in indexed municipal standards. Showing general administrative response.</em>
+        </div>`;
+      }
+
+      div.innerHTML = html;
+    }
+
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function escapeHtml(text) {
+    if (!text) return "";
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}Track Complaint — AI Civic Guardian{% endblock %}
+
+{% block content %}
+<div class="track-wrapper" style="max-width: 820px; margin: 0 auto;">
+  <!-- Track Header -->
+  <div style="margin-bottom: 2rem;">
+    <a href="/dashboard" class="btn btn-secondary" style="min-height: 40px; padding: 0.4rem 0.9rem; font-size: 0.85rem;" data-i18n="back_to_dashboard">
+      ← Back to Dashboard
+    </a>
+  </div>
+
+  <div class="card" style="margin-bottom: 2rem;">
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+      <span style="font-size: 1.8rem;" aria-hidden="true">🔍</span>
+      <h1 class="card-title" style="margin: 0; font-size: 1.6rem;" data-i18n="track_grievance_title">
+        Track Your Civic Grievance
+      </h1>
+    </div>
+    <p class="card-subtitle" style="margin-bottom: 1.5rem;" data-i18n="track_grievance_sub">
+      Enter your official grievance tracking number (format: CG-YYYY-XXXXXX) to monitor resolution progress, department assignment, and milestone updates.
+    </p>
+
+    <!-- Search Form -->
+    <form id="form-track-complaint" novalidate style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 260px;">
+        <label for="input-track-id" class="sr-only" data-i18n="complaint_id_label">Complaint Tracking ID</label>
+        <input 
+          type="text" 
+          id="input-track-id" 
+          class="form-input" 
+          placeholder="e.g. CG-2026-000001" 
+          aria-label="Complaint Tracking ID"
+          style="font-family: monospace; font-size: 1rem; text-transform: uppercase;"
+          required 
+          pattern="^CG-\d{4}-\d{6}$"
+        />
+      </div>
+      <button type="submit" id="btn-submit-track" class="btn btn-primary" style="min-height: 46px; padding: 0.5rem 1.5rem; font-size: 0.95rem;">
+        <span aria-hidden="true">🔍</span> <span data-i18n="track_now">Track Status</span>
+      </button>
+    </form>
+
+    <!-- Track Status / Alert Notification -->
+    <div id="track-alert" style="display: none; margin-top: 1.25rem;" role="alert" aria-live="polite"></div>
+  </div>
+
+  <!-- Loading State -->
+  <div id="track-loading" style="display: none; text-align: center; padding: 3rem 1rem; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md);" aria-live="polite">
+    <div class="ai-spinner" style="width: 32px; height: 32px; border-width: 3px; margin-bottom: 0.75rem;" aria-hidden="true"></div>
+    <div style="font-weight: 600; color: var(--primary-navy);" data-i18n="querying_status">Retrieving grievance status...</div>
+  </div>
+
+  <!-- Result Container -->
+  <div id="track-result" class="card" style="display: none;" aria-labelledby="track-result-heading">
+    <!-- Header with ID, Issue & Badges -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1.25rem; margin-bottom: 1.5rem;">
+      <div>
+        <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;" data-i18n="grievance_tracking_num">
+          Grievance Tracking Number
+        </div>
+        <h2 id="track-result-heading" style="font-size: 1.8rem; color: var(--primary-navy); margin: 0.2rem 0; font-family: monospace;">
+          CG-2026-XXXXXX
+        </h2>
+        <div id="track-issue-title" style="font-size: 1.15rem; color: var(--primary-blue); font-weight: 700;">
+          —
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        <span id="track-badge-severity" class="badge badge-severity-medium">MEDIUM</span>
+        <span id="track-badge-status" class="badge badge-status-submitted">SUBMITTED</span>
+      </div>
+    </div>
+
+    <!-- Workflow Milestone Stepper -->
+    <div style="margin-bottom: 2rem;">
+      <h3 style="font-size: 1rem; font-weight: 700; color: var(--primary-navy); margin-bottom: 1rem;" data-i18n="workflow_progress">
+        Resolution Workflow Progress
+      </h3>
+      <div class="workflow-stepper" id="workflow-stepper" aria-label="Resolution Workflow Progress">
+        <div class="workflow-step" id="wf-submitted">
+          <div class="wf-circle">1</div>
+          <div class="wf-label" data-i18n="status_submitted">SUBMITTED</div>
+        </div>
+        <div class="wf-line" id="line-1"></div>
+        <div class="workflow-step" id="wf-verified">
+          <div class="wf-circle">2</div>
+          <div class="wf-label" data-i18n="status_ai_verified">AI VERIFIED</div>
+        </div>
+        <div class="wf-line" id="line-2"></div>
+        <div class="workflow-step" id="wf-assigned">
+          <div class="wf-circle">3</div>
+          <div class="wf-label" data-i18n="status_department_assigned">ASSIGNED</div>
+        </div>
+        <div class="wf-line" id="line-3"></div>
+        <div class="workflow-step" id="wf-inprogress">
+          <div class="wf-circle">4</div>
+          <div class="wf-label" data-i18n="status_in_progress">IN PROGRESS</div>
+        </div>
+        <div class="wf-line" id="line-4"></div>
+        <div class="workflow-step" id="wf-resolved">
+          <div class="wf-circle">5</div>
+          <div class="wf-label" data-i18n="status_resolved">RESOLVED</div>
+        </div>
+      </div>
+
+      <!-- Human review special notice if applicable -->
+      <div id="track-review-notice" class="alert alert-warning" style="display: none; margin-top: 1rem;">
+        <span style="font-size: 1.25rem;">⚠️</span>
+        <div>
+          <strong>Needs Human Review:</strong>
+          <span style="font-size: 0.85rem;"> This complaint is undergoing municipal officer review to confirm issue type or resolution validity.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Details Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+      <div style="background: #f8fafc; padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <div style="font-size: 0.75rem; color: var(--text-light); font-weight: 700; text-transform: uppercase;" data-i18n="assigned_department">ASSIGNED DEPARTMENT</div>
+        <div id="track-dept-name" style="font-size: 1rem; font-weight: 700; color: var(--primary-navy); margin-top: 0.25rem;">—</div>
+      </div>
+
+      <div style="background: #f8fafc; padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <div style="font-size: 0.75rem; color: var(--text-light); font-weight: 700; text-transform: uppercase;" data-i18n="location">LOCATION</div>
+        <div id="track-location" style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-top: 0.25rem;">—</div>
+      </div>
+
+      <div style="background: #f8fafc; padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <div style="font-size: 0.75rem; color: var(--text-light); font-weight: 700; text-transform: uppercase;" data-i18n="logged_at">SUBMITTED ON</div>
+        <div id="track-created-at" style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-top: 0.25rem;">—</div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div style="display: flex; justify-content: flex-end; gap: 1rem; flex-wrap: wrap;">
+      <a id="btn-full-details" href="#" class="btn btn-primary" style="min-height: 42px;">
+        <span data-i18n="view_full_details">View Full Grievance Details</span> →
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  if (!ApiClient.isAuthenticated()) {
+    window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+  }
+
+  const form = document.getElementById("form-track-complaint");
+  const inputId = document.getElementById("input-track-id");
+  const submitBtn = document.getElementById("btn-submit-track");
+  const alertBox = document.getElementById("track-alert");
+  const loadingEl = document.getElementById("track-loading");
+  const resultCard = document.getElementById("track-result");
+
+  function updateWorkflowStepper(status) {
+    const s = (status || "").toUpperCase();
+    const steps = ["wf-submitted", "wf-verified", "wf-assigned", "wf-inprogress", "wf-resolved"];
+    const lines = ["line-1", "line-2", "line-3", "line-4"];
+
+    // Reset all
+    steps.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.className = "workflow-step";
+    });
+    lines.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.className = "wf-line";
+    });
+
+    const reviewNotice = document.getElementById("track-review-notice");
+    if (reviewNotice) reviewNotice.style.display = s === "NEEDS_HUMAN_REVIEW" ? "flex" : "none";
+
+    let activeLevel = 1;
+    if (s === "RESOLVED") activeLevel = 5;
+    else if (s === "IN_PROGRESS") activeLevel = 4;
+    else if (s === "DEPARTMENT_ASSIGNED") activeLevel = 3;
+    else if (s === "AI_VERIFIED") activeLevel = 2;
+    else activeLevel = 1;
+
+    for (let i = 0; i < activeLevel; i++) {
+      const el = document.getElementById(steps[i]);
+      if (el) el.classList.add("completed");
+      if (i === activeLevel - 1) el.classList.add("active");
+      if (i > 0) {
+        const line = document.getElementById(lines[i - 1]);
+        if (line) line.classList.add("completed");
+      }
+    }
+  }
+
+  async function trackComplaint(targetId) {
+    const cleanId = (targetId || "").trim().toUpperCase();
+    if (!cleanId) return;
+
+    alertBox.style.display = "none";
+    resultCard.style.display = "none";
+    loadingEl.style.display = "block";
+    submitBtn.disabled = true;
+
+    try {
+      const c = await ApiClient.getComplaint(cleanId);
+      loadingEl.style.display = "none";
+      submitBtn.disabled = false;
+
+      // Populate details
+      document.getElementById("track-result-heading").textContent = c.complaint_id;
+      document.getElementById("track-issue-title").textContent = tIssue(c.issue_type);
+
+      const sevEl = document.getElementById("track-badge-severity");
+      sevEl.textContent = tSeverity(c.severity || "MEDIUM");
+      sevEl.className = `badge badge-severity-${(c.severity || "medium").toLowerCase()}`;
+
+      const statEl = document.getElementById("track-badge-status");
+      const s = (c.status || "").toUpperCase();
+      if (s === "RESOLVED") {
+        statEl.textContent = `✓ ${tStatus("RESOLVED")}`;
+        statEl.className = "badge badge-status-resolved";
+      } else if (s === "NEEDS_HUMAN_REVIEW") {
+        statEl.textContent = `! ${tStatus("NEEDS_HUMAN_REVIEW")}`;
+        statEl.className = "badge badge-status-review";
+      } else if (s === "IN_PROGRESS") {
+        statEl.textContent = `● ${tStatus("IN_PROGRESS")}`;
+        statEl.className = "badge badge-status-inprogress";
+      } else if (s === "DEPARTMENT_ASSIGNED") {
+        statEl.textContent = `🏢 ${tStatus("DEPARTMENT_ASSIGNED")}`;
+        statEl.className = "badge badge-status-assigned";
+      } else if (s === "AI_VERIFIED") {
+        statEl.textContent = `🤖 ${tStatus("AI_VERIFIED")}`;
+        statEl.className = "badge badge-status-verified";
+      } else {
+        statEl.textContent = `⏳ ${tStatus("SUBMITTED")}`;
+        statEl.className = "badge badge-status-submitted";
+      }
+
+      document.getElementById("track-dept-name").textContent = c.department ? tDepartment(c.department.name) : t("routing_in_progress");
+      
+      if (c.latitude !== null && c.longitude !== null) {
+        document.getElementById("track-location").textContent = `Lat: ${c.latitude.toFixed(4)}, Lon: ${c.longitude.toFixed(4)}`;
+      } else {
+        document.getElementById("track-location").textContent = "Not provided";
+      }
+
+      document.getElementById("track-created-at").textContent = new Date(c.created_at).toLocaleString();
+      document.getElementById("btn-full-details").href = `/complaints/${encodeURIComponent(c.complaint_id)}`;
+
+      updateWorkflowStepper(c.status);
+      resultCard.style.display = "block";
+
+    } catch (err) {
+      loadingEl.style.display = "none";
+      submitBtn.disabled = false;
+      alertBox.className = "alert alert-warning";
+      // Safe authorization behavior: does not leak whether complaint exists for another user
+      alertBox.textContent = "Complaint not found or you are not authorized to view it. Please check the Complaint ID and verify your account.";
+      alertBox.style.display = "block";
+    }
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    trackComplaint(inputId.value);
+  });
+
+  // Check URL query parameters (e.g. /track?id=CG-2026-000001)
+  document.addEventListener("DOMContentLoaded", () => {
+    const params = new URLSearchParams(window.location.search);
+    const queryId = params.get("id");
+    if (queryId) {
+      inputId.value = queryId;
+      trackComplaint(queryId);
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,590 @@
+{% extends "base.html" %}
+
+{% block title %}Register Civic Complaint — AI Civic Guardian{% endblock %}
+
+{% block content %}
+<!-- Leaflet Map CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<div style="max-width: 780px; margin: 0 auto;">
+  <!-- Wizard Stepper Navigation -->
+  <nav class="wizard-stepper" aria-label="Complaint Registration Steps">
+    <div class="wizard-step-item active" id="step-nav-1">
+      <div class="step-circle">1</div>
+      <div class="step-label" data-i18n="wizard_step_1">Evidence</div>
+    </div>
+    <div class="wizard-step-item" id="step-nav-2">
+      <div class="step-circle">2</div>
+      <div class="step-label" data-i18n="wizard_step_2">Location</div>
+    </div>
+    <div class="wizard-step-item" id="step-nav-3">
+      <div class="step-circle">3</div>
+      <div class="step-label" data-i18n="wizard_step_3">Description</div>
+    </div>
+    <div class="wizard-step-item" id="step-nav-4">
+      <div class="step-circle">4</div>
+      <div class="step-label" data-i18n="wizard_step_4">Issue</div>
+    </div>
+    <div class="wizard-step-item" id="step-nav-5">
+      <div class="step-circle">5</div>
+      <div class="step-label" data-i18n="wizard_step_5">Review</div>
+    </div>
+  </nav>
+
+  <!-- Notification Banner -->
+  <div id="wizard-alert" style="display: none;"></div>
+
+  <div class="card" id="wizard-card">
+
+    <!-- ================= STEP 1: EVIDENCE ================= -->
+    <div class="wizard-step-pane" id="pane-step-1">
+      <h2 class="card-title" data-i18n="wizard_step1_title">How would you like to report the problem?</h2>
+      <p class="card-subtitle" data-i18n="wizard_step1_sub">
+        You can report using any one of these: <strong>Photo</strong>, <strong>Video</strong>, <strong>Voice</strong>,
+        or <strong>Text</strong>. Upload evidence to help field teams quickly locate and verify the issue.
+      </p>
+
+      <!-- Intelligent Grievance Intake Notice -->
+      <div class="alert alert-info">
+        <span style="font-size: 1.25rem;">✨</span>
+        <div>
+          <strong>Intelligent Intake:</strong> <span>Upload a clear photo of the civic issue for automatic category identification, department routing, and priority assessment.</span>
+        </div>
+      </div>
+
+      <div class="media-options-grid">
+        <label class="media-option-btn" for="input-photo">
+          <span style="font-size: 2.2rem;">📷</span>
+          <strong data-i18n="upload_image">Take / Upload Photo</strong>
+          <span style="font-size: 0.8rem; color: var(--text-light);">JPG, PNG, WebP (Max 10MB)</span>
+          <input type="file" id="input-photo" accept="image/jpeg,image/png,image/webp" capture="environment"
+            style="display: none;">
+        </label>
+
+        <label class="media-option-btn" for="input-video">
+          <span style="font-size: 2.2rem;">🎥</span>
+          <strong data-i18n="upload_video">Upload Video</strong>
+          <span style="font-size: 0.8rem; color: var(--text-light);">MP4, WebM (Max 50MB)</span>
+          <input type="file" id="input-video" accept="video/mp4,video/webm,video/quicktime" style="display: none;">
+        </label>
+
+        <label class="media-option-btn" for="input-audio">
+          <span style="font-size: 2.2rem;">🎤</span>
+          <strong data-i18n="record_voice">Record / Upload Voice</strong>
+          <span style="font-size: 0.8rem; color: var(--text-light);">WAV, MP3, M4A (Max 20MB)</span>
+          <input type="file" id="input-audio" accept="audio/wav,audio/mpeg,audio/mp3,audio/x-m4a,audio/webm"
+            style="display: none;">
+        </label>
+
+        <div class="media-option-btn" id="btn-text-only" role="button" tabindex="0">
+          <span style="font-size: 2.2rem;">📝</span>
+          <strong data-i18n="describe_with_text">Describe with Text</strong>
+          <span style="font-size: 0.8rem; color: var(--text-light);" data-i18n="proceed_no_media">Proceed without media
+            file</span>
+        </div>
+      </div>
+
+      <!-- File Preview Box -->
+      <div id="evidence-preview-container" style="display: none;">
+        <div class="preview-box">
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <div id="preview-thumb-box"></div>
+            <div>
+              <div id="preview-filename" style="font-weight: 600; font-size: 0.95rem;"></div>
+              <div id="preview-filesize" style="font-size: 0.8rem; color: var(--text-light);"></div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-secondary" id="btn-remove-evidence"
+            style="min-height: 38px; padding: 0.35rem 0.75rem; font-size: 0.85rem; color: var(--danger-red);"
+            data-i18n="remove">
+            ✕ Remove
+          </button>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; margin-top: 2rem;">
+        <button type="button" class="btn btn-primary btn-lg" id="btn-step1-next" data-i18n="continue_to_location">
+          Continue to Location →
+        </button>
+      </div>
+    </div>
+
+    <!-- ================= STEP 2: LOCATION ================= -->
+    <div class="wizard-step-pane" id="pane-step-2" style="display: none;">
+      <h2 class="card-title" data-i18n="wizard_step2_title">Where is the problem?</h2>
+      <p class="card-subtitle" data-i18n="wizard_step2_sub">
+        Enter a familiar place name, landmark, or area, or use your GPS to place the pin on the map.
+      </p>
+
+      <!-- Location Search & Action Toolbar -->
+      <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.25rem;">
+        <label for="input-place-search" class="form-label" style="font-weight: 700; color: var(--primary-navy); margin-bottom: 0.4rem;">
+          Enter location, area or landmark
+        </label>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <input type="text" id="input-place-search" class="form-input" style="flex: 1; min-width: 220px;"
+            placeholder="e.g., Gandhipuram, Coimbatore" autocomplete="off">
+          <button type="button" class="btn btn-primary" id="btn-search-location"
+            style="white-space: nowrap; display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700;">
+            🔍 <span>Search Location</span>
+          </button>
+          <button type="button" class="btn btn-teal" id="btn-get-gps"
+            style="white-space: nowrap; display: inline-flex; align-items: center; gap: 0.4rem;"
+            data-i18n="use_current_location">
+            📍 <span>Use My Current Location</span>
+          </button>
+        </div>
+        <div id="location-search-status" style="font-size: 0.85rem; margin-top: 0.5rem; color: var(--text-muted); display: none;"></div>
+        <div id="gps-status-message" style="font-size: 0.85rem; margin-top: 0.5rem; color: var(--text-muted);"></div>
+      </div>
+
+      <!-- Search Results Dropdown / Selection List -->
+      <div id="location-search-results-box"
+        style="display: none; margin-bottom: 1.25rem; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-sm); box-shadow: var(--shadow-md); max-height: 240px; overflow-y: auto;">
+        <div style="padding: 0.5rem 0.85rem; background: #f1f5f9; border-bottom: 1px solid var(--border-color); font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
+          Select Matching Location Candidate
+        </div>
+        <div id="location-results-list" style="display: flex; flex-direction: column;"></div>
+      </div>
+
+      <!-- Selected Location / Address Confirmation Card -->
+      <div id="selected-location-card"
+        style="display: none; background: #f0fdf4; border: 1px solid #86efac; border-radius: var(--radius-sm); padding: 0.85rem 1rem; margin-bottom: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+          <div>
+            <div style="font-size: 0.75rem; font-weight: 700; color: #166534; text-transform: uppercase;">
+              ✓ Selected Location & Formatted Address
+            </div>
+            <div id="selected-place-name" style="font-size: 1.05rem; font-weight: 700; color: #14532d; margin-top: 0.2rem;">—</div>
+            <div id="selected-address-text" style="font-size: 0.85rem; color: #166534; margin-top: 0.15rem; line-height: 1.4;">—</div>
+          </div>
+          <span class="badge" style="background: #dcfce7; color: #15803d; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.5rem; white-space: nowrap;">
+            CONFIRMED
+          </span>
+        </div>
+      </div>
+
+      <!-- Interactive Map with Movable Marker -->
+      <div style="margin-bottom: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.5rem;">
+          <span style="font-size: 0.85rem; font-weight: 700; color: var(--primary-navy);">
+            Interactive Location Map (Move pin to adjust spot)
+          </span>
+          <span id="map-marker-status" style="font-size: 0.75rem; color: var(--text-light); font-style: italic;">
+            Drag pin on map anytime to fine-tune exact complaint spot
+          </span>
+        </div>
+        <div id="wizard-location-map"
+          style="height: 320px; width: 100%; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: #f8fafc; z-index: 1;"></div>
+      </div>
+
+      <!-- Auto-populated & Editable Coordinates -->
+      <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1.5rem;">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem;">
+          GPS Coordinates (Auto-populated from place search or pin drag)
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="input-latitude" class="form-label" style="font-size: 0.8rem;" data-i18n="latitude_label">Latitude (-90 to 90)</label>
+            <input type="number" step="any" id="input-latitude" class="form-input" placeholder="e.g. 11.0183">
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="input-longitude" class="form-label" style="font-size: 0.8rem;" data-i18n="longitude_label">Longitude (-180 to 180)</label>
+            <input type="number" step="any" id="input-longitude" class="form-input" placeholder="e.g. 76.9644">
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
+        <button type="button" class="btn btn-secondary btn-lg" id="btn-step2-prev" data-i18n="back">← Back</button>
+        <button type="button" class="btn btn-primary btn-lg" id="btn-step2-next"
+          data-i18n="continue_to_description">Continue to Description →</button>
+      </div>
+    </div>
+
+    <!-- ================= STEP 3: DESCRIPTION ================= -->
+    <div class="wizard-step-pane" id="pane-step-3" style="display: none;">
+      <h2 class="card-title" data-i18n="wizard_step3_title">What is the problem?</h2>
+      <p class="card-subtitle" data-i18n="wizard_step3_sub">Explain the issue so the civic department understands its
+        urgency.</p>
+
+      <div class="form-group">
+        <label for="input-language" class="form-label" data-i18n="lang_for_description">Language for Description</label>
+        <select id="input-language" class="form-select">
+          <option value="en">English</option>
+          <option value="ta">தமிழ் (Tamil)</option>
+          <option value="hi">हिन्दी (Hindi)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+          <label for="input-description" class="form-label" style="margin-bottom: 0;" data-i18n="description_label">Description (Optional if evidence provided)</label>
+          <button type="button" class="btn btn-secondary" id="voice-btn" style="padding: 0.3rem 0.75rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem; border: 1px solid #0d9488; color: #0f766e; background: #f0fdfa;">
+            <span>🎤</span>
+            <span id="voice-btn-label">Speak in Tamil (தமிழில் பேச)</span>
+          </button>
+        </div>
+        <div id="voice-indicator" style="display: none; font-size: 0.85rem; color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-sm); padding: 0.4rem 0.75rem; margin-bottom: 0.5rem; align-items: center; gap: 0.5rem;">
+          <span class="ai-spinner" style="width: 14px; height: 14px; border-width: 2px; border-color: #ef4444; border-top-color: transparent;"></span>
+          <span>Listening in Tamil (பேசுங்கள்)... Click button again to stop and review text.</span>
+        </div>
+        <textarea id="input-description" class="form-textarea"
+          placeholder="e.g. Large pothole near the road junction causing danger to vehicles..."
+          data-i18n-placeholder="description_placeholder"></textarea>
+        <div class="form-help">
+          Examples: "Large pothole near the road junction" • "Garbage has been overflowing for two days"
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
+        <button type="button" class="btn btn-secondary btn-lg" id="btn-step3-prev" data-i18n="back">← Back</button>
+        <button type="button" class="btn btn-primary btn-lg" id="btn-step3-next" data-i18n="continue_to_issue">Continue
+          to Issue Type →</button>
+      </div>
+    </div>
+
+    <!-- ================= STEP 4: ISSUE SELECTION & AI DETECTION ================= -->
+    <div class="wizard-step-pane" id="pane-step-4" style="display: none;">
+      <h2 class="card-title" data-i18n="wizard_step4_title">Civic Issue Classification</h2>
+      <p class="card-subtitle" data-i18n="wizard_step4_sub">AI-assisted detection from your uploaded evidence or manual
+        category selection.</p>
+
+      <!-- AI State 1: Loading / Processing -->
+      <div id="ai-loading-box" class="ai-loading-container" style="display: none;">
+        <div class="ai-spinner"></div>
+        <div style="font-weight: 700; color: var(--primary-navy); margin-bottom: 0.25rem;" id="ai-loading-msg"
+          data-i18n="ai_processing">
+          Analyzing evidence with YOLO neural network...
+        </div>
+        <div style="font-size: 0.85rem; color: var(--text-light);" data-i18n="ai_validating_raster">
+          Validating image raster and executing deep learning inference
+        </div>
+      </div>
+
+      <!-- AI State 2: Successful Detection -->
+      <div id="ai-result-box" class="ai-detection-card" style="display: none;">
+        <div class="ai-header-badge">
+          <span>🤖</span>
+          <span data-i18n="ai_detection">YOLO AI Detection Active</span>
+        </div>
+
+        <!-- Unvalidated Class 7 Warning -->
+        <div id="ai-unvalidated-class-box"
+          style="display: none; font-size: 0.85rem; color: #92400e; background: #fef3c7; border: 1px solid #fde68a; padding: 0.75rem 1rem; border-radius: var(--radius-sm); margin-bottom: 0.75rem;">
+          ⚠️ <strong>Unvalidated Class Warning:</strong> <span id="ai-unvalidated-class-msg">Class 7 (Drainage Problem)
+            has 0 verified training annotations in dataset DS-2026-000018. This prediction is experimental and
+            completely unvalidated. Please manually confirm or override your category selection below.</span>
+        </div>
+
+        <div
+          style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <div style="font-size: 0.8rem; color: var(--text-light); text-transform: uppercase; font-weight: 600;"
+              data-i18n="detected_issue">Detected Issue</div>
+            <div id="ai-detected-issue-name" style="font-size: 1.5rem; font-weight: 800; color: var(--primary-navy);">
+              Pothole
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <div class="ai-stat-pill pill-confidence" id="ai-confidence-pill">
+              🎯 <span id="ai-confidence-value">0.0%</span> <span data-i18n="confidence">Confidence</span>
+            </div>
+            <div class="ai-stat-pill" id="ai-severity-pill">
+              ⚡ <span id="ai-severity-value">MEDIUM</span> <span data-i18n="severity">Severity</span>
+            </div>
+            <div class="ai-stat-pill" id="ai-dept-pill">
+              🏢 <span id="ai-dept-value">Roads & Highways</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="ai-severity-reason"
+          style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; background: #ffffff; padding: 0.6rem 0.85rem; border-radius: var(--radius-sm); border: 1px solid #e2e8f0;">
+          Reasoning: Road surface defect posing hazard to vehicular traffic and pedestrians.
+        </div>
+
+        <!-- Multiple detections alert -->
+        <div id="ai-multiple-detections-box"
+          style="display: none; font-size: 0.85rem; color: #1e40af; background: #dbeafe; padding: 0.6rem 0.85rem; border-radius: var(--radius-sm); margin-bottom: 0.75rem;">
+          ℹ️ <strong data-i18n="ai_multiple_objects">Multiple Objects Detected:</strong> <span
+            id="ai-multiple-detections-list"></span>. The highest-confidence issue has been automatically selected.
+        </div>
+
+        <div
+          style="font-size: 0.85rem; color: #166534; background: #dcfce7; padding: 0.6rem 0.85rem; border-radius: var(--radius-sm); margin-bottom: 0.75rem;">
+          ✓ <strong data-i18n="review_ai_result">Citizen Review:</strong> The AI model has pre-selected this civic
+          issue. Click below to confirm or select a different category to override.
+        </div>
+        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+          <button type="button" class="btn btn-primary" id="btn-confirm-ai-prediction">
+            ✓ Confirm Category &amp; Continue →
+          </button>
+        </div>
+      </div>
+
+      <!-- Automatic Issue & Department Routing Banner -->
+      <div id="ai-auto-routing-box" class="alert alert-info" style="display: none; align-items: center; gap: 0.75rem; margin-bottom: 1rem; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; border-radius: var(--radius-sm); padding: 0.85rem 1rem;">
+        <span style="font-size: 1.4rem;">🎯</span>
+        <div>
+          <strong style="color: #1e3a8a;">Automatic Issue &amp; Department Routing:</strong>
+          <div id="ai-auto-routing-msg" style="font-size: 0.875rem; margin-top: 0.2rem; color: #1e40af;">
+            Analyzing complaint description...
+          </div>
+        </div>
+      </div>
+
+      <!-- AI State 3: Model Unavailable Banner -->
+      <div id="ai-unavailable-box" class="alert alert-info" style="display: none; flex-direction: column; gap: 0.75rem; background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534;"
+        role="note">
+        <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+          <span style="font-size: 1.5rem;">ℹ️</span>
+          <div>
+            <strong data-i18n="citizen_notice_title">Citizen Notice:</strong>
+            <p style="margin-top: 0.2rem; font-size: 0.85rem;" id="ai-unavailable-msg"
+              data-i18n="ai_model_not_available">
+              Image uploaded successfully. Please confirm the issue category to continue.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI State 4: No Detection Banner -->
+      <div id="ai-no-detection-box" class="alert alert-warning" style="display: none;">
+        <span style="font-size: 1.25rem;">🔍</span>
+        <div>
+          <strong data-i18n="no_detection">No Civic Issue Detected:</strong>
+          <span style="font-size: 0.85rem;"> The AI model analyzed your image but did not detect a recognized civic
+            hazard with sufficient confidence. Please choose the appropriate category manually below.</span>
+        </div>
+      </div>
+
+      <!-- AI State 5: Inference / Network Error Banner -->
+      <div id="ai-error-box" class="alert alert-danger" style="display: none;">
+        <span style="font-size: 1.25rem;">⚠️</span>
+        <div>
+          <strong data-i18n="inference_failed">AI Processing Error:</strong>
+          <span id="ai-error-msg" style="font-size: 0.85rem;">Unable to process image.</span>
+          <span style="font-size: 0.85rem;"> You may select the category manually below.</span>
+        </div>
+      </div>
+
+      <!-- Manual Issue Selection (Development Fallback / Citizen Review Override) -->
+      <div id="manual-selection-container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--primary-navy); margin: 0;"
+            data-i18n="select_confirm_category">
+            Select / Confirm Category
+          </h3>
+          <span style="font-size: 0.8rem; color: var(--text-light);" data-i18n="click_choose_override">Click to choose
+            or override</span>
+        </div>
+
+        <div class="issue-grid" id="issue-selection-grid">
+          <div class="issue-card-btn" data-issue="pothole" role="button" tabindex="0">
+            <span class="issue-card-icon">🕳️</span>
+            <span class="issue-card-title" data-i18n-issue="pothole">Pothole</span>
+          </div>
+          <div class="issue-card-btn" data-issue="damaged_road" role="button" tabindex="0">
+            <span class="issue-card-icon">🚧</span>
+            <span class="issue-card-title" data-i18n-issue="damaged_road">Damaged Road</span>
+          </div>
+          <div class="issue-card-btn" data-issue="garbage_overflow" role="button" tabindex="0">
+            <span class="issue-card-icon">🗑️</span>
+            <span class="issue-card-title" data-i18n-issue="garbage_overflow">Garbage Overflow</span>
+          </div>
+          <div class="issue-card-btn" data-issue="illegal_dumping" role="button" tabindex="0">
+            <span class="issue-card-icon">🚯</span>
+            <span class="issue-card-title" data-i18n-issue="illegal_dumping">Illegal Dumping</span>
+          </div>
+          <div class="issue-card-btn" data-issue="water_leakage" role="button" tabindex="0">
+            <span class="issue-card-icon">💧</span>
+            <span class="issue-card-title" data-i18n-issue="water_leakage">Water Leakage</span>
+          </div>
+          <div class="issue-card-btn" data-issue="sewage_overflow" role="button" tabindex="0">
+            <span class="issue-card-icon">🚽</span>
+            <span class="issue-card-title" data-i18n-issue="sewage_overflow">Sewage Overflow</span>
+          </div>
+          <div class="issue-card-btn" data-issue="broken_street_light" role="button" tabindex="0">
+            <span class="issue-card-icon">💡</span>
+            <span class="issue-card-title" data-i18n-issue="broken_street_light">Broken Street Light</span>
+          </div>
+          <div class="issue-card-btn" data-issue="drainage_problem" role="button" tabindex="0">
+            <span class="issue-card-icon">🌊</span>
+            <span class="issue-card-title" data-i18n-issue="drainage_problem">Drainage Problem</span>
+          </div>
+          <div class="issue-card-btn" data-issue="traffic_issue" role="button" tabindex="0">
+            <span class="issue-card-icon">🚦</span>
+            <span class="issue-card-title" data-i18n-issue="traffic_issue">Traffic Issue</span>
+          </div>
+          <div class="issue-card-btn" data-issue="building_damage" role="button" tabindex="0">
+            <span class="issue-card-icon">🏚️</span>
+            <span class="issue-card-title" data-i18n-issue="building_damage">Building Damage</span>
+          </div>
+          <div class="issue-card-btn" data-issue="park_damage" role="button" tabindex="0">
+            <span class="issue-card-icon">🌳</span>
+            <span class="issue-card-title" data-i18n-issue="park_damage">Park / Public Space</span>
+          </div>
+          <div class="issue-card-btn" data-issue="environmental_pollution" role="button" tabindex="0">
+            <span class="issue-card-icon">🏭</span>
+            <span class="issue-card-title" data-i18n-issue="environmental_pollution">Environmental Pollution</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
+        <button type="button" class="btn btn-secondary btn-lg" id="btn-step4-prev" data-i18n="back">← Back</button>
+        <button type="button" class="btn btn-primary btn-lg" id="btn-step4-next" data-i18n="continue_to_review">Continue
+          to Review →</button>
+      </div>
+    </div>
+
+    <!-- ================= STEP 5: REVIEW ================= -->
+    <div class="wizard-step-pane" id="pane-step-5" style="display: none;">
+      <h2 class="card-title" data-i18n="wizard_step5_title">Review & Submit Complaint</h2>
+      <p class="card-subtitle" data-i18n="wizard_step5_sub">Verify your complaint details before submitting to municipal
+        authorities.</p>
+
+      <div
+        style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.5rem; margin-bottom: 1.5rem;">
+        <div style="display: grid; grid-template-columns: 140px 1fr; gap: 0.75rem; font-size: 0.95rem;">
+          <div style="color: var(--text-light); font-weight: 600;" data-i18n="review_issue_category">Issue Category:
+          </div>
+          <div id="review-issue-name" style="font-weight: 700; color: var(--primary-navy);">—</div>
+
+          <div style="color: var(--text-light); font-weight: 600;" data-i18n="review_assigned_dept">Assigned Dept:</div>
+          <div id="review-dept-name" style="font-weight: 700; color: var(--primary-blue);">—</div>
+
+          <div style="color: var(--text-light); font-weight: 600;" data-i18n="review_ai_class">AI Classification:</div>
+          <div id="review-ai-mode" style="font-weight: 600;">Manual citizen confirmation</div>
+
+          <div style="color: var(--text-light); font-weight: 600;" data-i18n="review_severity_level">Severity Level:
+          </div>
+          <div id="review-severity-level" style="font-weight: 600; color: var(--warning-amber);">MEDIUM</div>
+
+          <div style="color: var(--text-light); font-weight: 600;" data-i18n="review_location">Location / Address:</div>
+          <div>
+            <div id="review-location" style="font-weight: 700; color: var(--primary-navy);">—</div>
+            <div id="review-address" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.15rem;"></div>
+          </div>
+
+          <div style="color: var(--text-light); font-weight: 600;" data-i18n="review_description">Description:</div>
+          <div id="review-description" style="white-space: pre-wrap;">—</div>
+
+          <div style="color: var(--text-light); font-weight: 600;" data-i18n="review_evidence">Evidence File:</div>
+          <div id="review-evidence">—</div>
+        </div>
+      </div>
+
+      <div class="alert alert-info">
+        <span>🏢</span>
+        <div>
+          <strong data-i18n="auto_assigned_dept">Automatically Assigned Department:</strong>
+          <div id="review-dept-box"
+            style="font-size: 1.1rem; font-weight: 700; color: var(--primary-blue); margin-top: 0.2rem;">
+            Select an issue to preview department
+          </div>
+        </div>
+      </div>
+
+      <!-- Duplicate Detection Status & Warning Containers -->
+      <div id="duplicate-checking-box"
+        style="display: none; background: #f8fafc; border: 1px dashed #94a3b8; border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.5rem; text-align: center; color: var(--text-muted);">
+        <div class="ai-spinner" style="width: 24px; height: 24px; border-width: 3px; margin-bottom: 0.5rem;"></div>
+        <div style="font-weight: 600; font-size: 0.9rem;" data-i18n="checking_duplicates">Checking for similar
+          complaints in your area...</div>
+      </div>
+
+      <div id="duplicate-warning-card" class="alert alert-warning"
+        style="display: none; margin-bottom: 1.5rem; border-left: 4px solid #f59e0b; background: #fffbeb; padding: 1.25rem; flex-direction: column; align-items: stretch;">
+        <div style="display: flex; gap: 0.75rem; align-items: flex-start; margin-bottom: 0.75rem;">
+          <span style="font-size: 1.5rem;">⚠️</span>
+          <div>
+            <strong style="font-size: 1rem; color: #92400e;" data-i18n="possible_duplicate">Possible Similar Complaint
+              Found</strong>
+            <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #78350f;" data-i18n="similar_complaint_found">
+              A grievance matching your reported issue and location was recently registered. If your report concerns the
+              same problem, you can view the existing grievance instead of re-submitting.
+            </p>
+          </div>
+        </div>
+
+        <div id="duplicate-candidates-list"
+          style="margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem;"></div>
+
+        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+          <a id="btn-duplicate-view" href="#" target="_blank" class="btn btn-secondary"
+            style="min-height: 36px; padding: 0.35rem 0.85rem; font-size: 0.85rem;" data-i18n="view_existing_complaint">
+            🔍 View Existing Complaint
+          </a>
+          <span style="font-size: 0.8rem; color: #78350f;" data-i18n="continue_anyway">
+            Or click <strong>"Submit Complaint"</strong> below to continue anyway.
+          </span>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
+        <button type="button" class="btn btn-secondary btn-lg" id="btn-step5-prev" data-i18n="back">← Back</button>
+        <button type="button" class="btn btn-primary btn-lg" id="btn-submit-complaint">
+          <span style="font-size: 1.2rem;">🚀</span>
+          <span data-i18n="submit_complaint">Submit Complaint</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ================= SUBMITTED SUCCESS VIEW ================= -->
+    <div class="wizard-step-pane" id="pane-step-success" style="display: none; text-align: center; padding: 2rem 1rem;">
+      <div style="font-size: 3.5rem; margin-bottom: 1rem;">✅</div>
+      <h2 class="card-title" style="font-size: 1.8rem; color: var(--success-green);" data-i18n="complaint_submitted">
+        Complaint Submitted Successfully
+      </h2>
+      <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+        Your grievance has been registered on the municipal portal and dispatched to the designated department.
+      </p>
+
+      <div
+        style="display: inline-block; background: #f0fdf4; border: 2px dashed #86efac; border-radius: var(--radius-md); padding: 1.25rem 2rem; margin-bottom: 2rem;">
+        <div style="font-size: 0.85rem; color: #166534; font-weight: 600; text-transform: uppercase;">Official Tracking
+          Identifier</div>
+        <div id="success-complaint-id"
+          style="font-size: 1.8rem; font-weight: 800; color: var(--primary-navy); letter-spacing: 0.05em; margin: 0.35rem 0;">
+          CG-2026-XXXXXX
+        </div>
+        <button type="button" id="btn-copy-complaint-id" class="btn btn-secondary"
+          style="min-height: 36px; padding: 0.3rem 0.8rem; font-size: 0.8rem;">
+          📋 <span data-i18n="copy_id">Copy Complaint ID</span>
+        </button>
+      </div>
+
+      <div
+        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; max-width: 500px; margin: 0 auto 2rem auto; text-align: left; font-size: 0.9rem;">
+        <div
+          style="background: #f8fafc; padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+          <div style="color: var(--text-light); font-size: 0.75rem;" data-i18n="status">Status</div>
+          <div style="font-weight: 700; color: #1e40af;">SUBMITTED</div>
+        </div>
+        <div
+          style="background: #f8fafc; padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+          <div style="color: var(--text-light); font-size: 0.75rem;" data-i18n="department">Department</div>
+          <div id="success-dept-name" style="font-weight: 700; color: var(--primary-navy);">—</div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+        <a id="link-track-complaint" href="#" class="btn btn-primary btn-lg">
+          🔍 <span data-i18n="track_complaint">Track Complaint</span>
+        </a>
+        <a href="/dashboard" class="btn btn-secondary btn-lg">
+          ← <span data-i18n="back_to_dashboard">Back to Dashboard</span>
+        </a>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/wizard.js"></script>
+{% endblock %}

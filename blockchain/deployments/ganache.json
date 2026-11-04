@@ -1,0 +1,11 @@
+{
+  "network": "ganache",
+  "rpc_url": "http://127.0.0.1:7545",
+  "chainId": 1337,
+  "contractAddress": "0xe78A0F7E598Cc8b0Bb87894B0F60dD2a88d6a8Ab",
+  "deployerAddress": "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1",
+  "transactionHash": "0f229123b3657c11ef63db834dce5b207154b8753f88d4b25136aca2b40a84c6",
+  "blockNumber": 1,
+  "owner": "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1",
+  "authorizedWriter": "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
+}

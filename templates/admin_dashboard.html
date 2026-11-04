@@ -1,0 +1,726 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard — AI Civic Guardian{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding-bottom: 3rem;">
+  <!-- Header Bar -->
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; background: #ffffff; padding: 1.5rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+    <div>
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
+        <span style="font-size: 1.7rem;">🏛️</span>
+        <h1 style="font-size: 1.6rem; color: var(--primary-navy); margin: 0; font-weight: 700;">
+          Admin Supervision Dashboard
+        </h1>
+        <span class="badge" style="background: #1e3a8a; color: white; font-size: 0.75rem; letter-spacing: 0.05em;">ADMIN</span>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.95rem; margin: 0;">
+        Municipal Grievance Oversight &bull; Logged in as: <strong id="admin-name">Admin</strong> (<span id="admin-email">admin@civic.gov</span>)
+      </p>
+    </div>
+
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+      <a href="/admin/models" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+        🤖 AI Models
+      </a>
+      <a href="/admin/datasets" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+        📁 Datasets
+      </a>
+
+      <button id="btn-refresh-admin" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+        🔄 Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Access Warning Guard -->
+  <div id="admin-auth-guard" class="alert alert-danger" style="display: none; margin-bottom: 1.5rem;">
+    <strong>⚠️ Access Restricted:</strong> This section requires an active Administrator session. Redirecting...
+  </div>
+
+  <div id="admin-alert" style="display: none; margin-bottom: 1.5rem;"></div>
+
+  <!-- Main Admin Content Container -->
+  <div id="admin-main-content">
+    <!-- Top KPI Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+      <div class="card" style="padding: 1rem; text-align: center; border-left: 4px solid var(--primary-navy);">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Total Complaints</div>
+        <div id="stat-total-complaints" style="font-size: 1.8rem; font-weight: 800; color: var(--primary-navy); margin-top: 0.25rem;">0</div>
+      </div>
+      <div class="card" style="padding: 1rem; text-align: center; border-left: 4px solid var(--warning-amber);">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Pending / In Progress</div>
+        <div id="stat-pending-complaints" style="font-size: 1.8rem; font-weight: 800; color: var(--warning-amber); margin-top: 0.25rem;">0</div>
+      </div>
+      <div class="card" style="padding: 1rem; text-align: center; border-left: 4px solid var(--success-green);">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Resolved</div>
+        <div id="stat-resolved-complaints" style="font-size: 1.8rem; font-weight: 800; color: var(--success-green); margin-top: 0.25rem;">0</div>
+      </div>
+      <div class="card" style="padding: 1rem; text-align: center; border-left: 4px solid var(--primary-blue);">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Departments</div>
+        <div id="stat-departments" style="font-size: 1.8rem; font-weight: 800; color: var(--primary-blue); margin-top: 0.25rem;">12</div>
+      </div>
+      <div class="card" style="padding: 1rem; text-align: center; border-left: 4px solid #8b5cf6;">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Officers</div>
+        <div id="stat-officers" style="font-size: 1.8rem; font-weight: 800; color: #8b5cf6; margin-top: 0.25rem;">12</div>
+      </div>
+      <div class="card" style="padding: 1rem; text-align: center; border-left: 4px solid var(--accent-teal);">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Citizens</div>
+        <div id="stat-citizens" style="font-size: 1.8rem; font-weight: 800; color: var(--accent-teal); margin-top: 0.25rem;">0</div>
+      </div>
+    </div>
+
+    <!-- Tabbed Navigation -->
+    <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid var(--border-color); margin-bottom: 1.5rem; overflow-x: auto;">
+      <button class="tab-btn active" data-tab="tab-complaints" style="background: none; border: none; padding: 0.75rem 1.25rem; font-size: 0.95rem; font-weight: 700; color: var(--primary-blue); border-bottom: 3px solid var(--primary-blue); cursor: pointer;">
+        📋 All Complaints
+      </button>
+      <button class="tab-btn" data-tab="tab-departments" style="background: none; border: none; padding: 0.75rem 1.25rem; font-size: 0.95rem; font-weight: 600; color: var(--text-muted); cursor: pointer;">
+        🏢 Departments & Routing
+      </button>
+      <button class="tab-btn" data-tab="tab-officers" style="background: none; border: none; padding: 0.75rem 1.25rem; font-size: 0.95rem; font-weight: 600; color: var(--text-muted); cursor: pointer;">
+        👥 Officer Accounts (12)
+      </button>
+      <button class="tab-btn" data-tab="tab-audit" style="background: none; border: none; padding: 0.75rem 1.25rem; font-size: 0.95rem; font-weight: 600; color: var(--text-muted); cursor: pointer;">
+        🛡️ Audit Logs
+      </button>
+    </div>
+
+    <!-- TAB 1: ALL COMPLAINTS -->
+    <div id="tab-complaints" class="tab-pane">
+      <div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+          <h2 style="font-size: 1.2rem; color: var(--primary-navy); margin: 0; font-weight: 700;">
+            Cross-Department Complaints Supervision
+          </h2>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <select id="filter-complaint-dept" class="form-input" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; width: auto;">
+              <option value="">All Departments</option>
+            </select>
+            <select id="filter-complaint-status" class="form-input" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; width: auto;">
+              <option value="">All Statuses</option>
+              <option value="SUBMITTED">SUBMITTED</option>
+              <option value="AI_VERIFIED">AI_VERIFIED</option>
+              <option value="DEPARTMENT_ASSIGNED">DEPARTMENT_ASSIGNED</option>
+              <option value="IN_PROGRESS">IN_PROGRESS</option>
+              <option value="RESOLVED">RESOLVED</option>
+              <option value="REJECTED">REJECTED</option>
+            </select>
+            <select id="filter-complaint-sev" class="form-input" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; width: auto;">
+              <option value="">All Severities</option>
+              <option value="LOW">LOW</option>
+              <option value="MEDIUM">MEDIUM</option>
+              <option value="HIGH">HIGH</option>
+              <option value="CRITICAL">CRITICAL</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="table" style="width: 100%; font-size: 0.9rem;">
+            <thead>
+              <tr style="text-align: left; background: #f8fafc; border-bottom: 2px solid var(--border-color);">
+                <th style="padding: 0.75rem;">Complaint ID</th>
+                <th style="padding: 0.75rem;">Category</th>
+                <th style="padding: 0.75rem;">Department</th>
+                <th style="padding: 0.75rem;">Severity</th>
+                <th style="padding: 0.75rem;">Status</th>
+                <th style="padding: 0.75rem;">Citizen</th>
+                <th style="padding: 0.75rem;">Created</th>
+                <th style="padding: 0.75rem; text-align: center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="complaints-table-body">
+              <tr>
+                <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-light);">
+                  Loading complaints...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: DEPARTMENTS & ROUTING -->
+    <div id="tab-departments" class="tab-pane" style="display: none;">
+      <div class="card" style="padding: 1.25rem;">
+        <h2 style="font-size: 1.2rem; color: var(--primary-navy); margin-bottom: 1rem; font-weight: 700;">
+          Municipal Departments & Canonical Category Routing
+        </h2>
+        <div style="overflow-x: auto;">
+          <table class="table" style="width: 100%; font-size: 0.9rem;">
+            <thead>
+              <tr style="text-align: left; background: #f8fafc; border-bottom: 2px solid var(--border-color);">
+                <th style="padding: 0.75rem;">ID</th>
+                <th style="padding: 0.75rem;">Department Name</th>
+                <th style="padding: 0.75rem;">Canonical Issue Categories Handled</th>
+                <th style="padding: 0.75rem; text-align: center;">Active Complaints</th>
+                <th style="padding: 0.75rem; text-align: center;">Assigned Officers</th>
+                <th style="padding: 0.75rem; text-align: center;">Status</th>
+              </tr>
+            </thead>
+            <tbody id="departments-table-body">
+              <tr>
+                <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-light);">
+                  Loading departments...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: OFFICER MANAGEMENT -->
+    <div id="tab-officers" class="tab-pane" style="display: none;">
+      <div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <h2 style="font-size: 1.2rem; color: var(--primary-navy); margin: 0; font-weight: 700;">
+              Department Officer Accounts & Assignments
+            </h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.25rem 0 0 0;">
+              12 canonical category officer accounts configured with strict department isolation.
+            </p>
+          </div>
+          <button id="btn-show-add-officer" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+            ➕ Add Officer Account
+          </button>
+        </div>
+
+        <!-- Add Officer Form (Collapsible) -->
+        <div id="add-officer-card" style="display: none; background: #f8fafc; padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 1.5rem;">
+          <h3 style="font-size: 1rem; color: var(--primary-navy); margin-top: 0; margin-bottom: 0.75rem;">Create New Officer Account</h3>
+          <form id="form-create-officer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div>
+              <label class="form-label">Full Name</label>
+              <input type="text" id="new-officer-name" class="form-input" required placeholder="e.g. Officer - Sanitation">
+            </div>
+            <div>
+              <label class="form-label">Email Address</label>
+              <input type="email" id="new-officer-email" class="form-input" required placeholder="officer.sanitation@civic.gov">
+            </div>
+            <div>
+              <label class="form-label">Password</label>
+              <input type="password" id="new-officer-password" class="form-input" required placeholder="Minimum 6 characters">
+            </div>
+            <div>
+              <label class="form-label">Assign Department</label>
+              <select id="new-officer-dept" class="form-input" required>
+                <option value="">Select Department...</option>
+              </select>
+            </div>
+            <div style="grid-column: 1 / -1; display: flex; gap: 0.5rem; justify-content: flex-end;">
+              <button type="button" id="btn-cancel-add-officer" class="btn btn-secondary" style="font-size: 0.85rem;">Cancel</button>
+              <button type="submit" id="btn-save-officer" class="btn btn-primary" style="font-size: 0.85rem;">Create Officer</button>
+            </div>
+          </form>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="table" style="width: 100%; font-size: 0.9rem;">
+            <thead>
+              <tr style="text-align: left; background: #f8fafc; border-bottom: 2px solid var(--border-color);">
+                <th style="padding: 0.75rem;">ID</th>
+                <th style="padding: 0.75rem;">Officer Name</th>
+                <th style="padding: 0.75rem;">Email Address</th>
+                <th style="padding: 0.75rem;">Assigned Department</th>
+                <th style="padding: 0.75rem;">Role</th>
+                <th style="padding: 0.75rem;">Created</th>
+                <th style="padding: 0.75rem; text-align: center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="officers-table-body">
+              <tr>
+                <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-light);">
+                  Loading officers...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: AUDIT LOGS -->
+    <div id="tab-audit" class="tab-pane" style="display: none;">
+      <div class="card" style="padding: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+          <h2 style="font-size: 1.2rem; color: var(--primary-navy); margin: 0; font-weight: 700;">
+            Immutable System Audit Logs
+          </h2>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="filter-audit-action" class="form-input" placeholder="Filter by action..." style="padding: 0.4rem 0.8rem; font-size: 0.85rem; width: 200px;">
+            <button id="btn-filter-audit" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">Search</button>
+          </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="table" style="width: 100%; font-size: 0.85rem;">
+            <thead>
+              <tr style="text-align: left; background: #f8fafc; border-bottom: 2px solid var(--border-color);">
+                <th style="padding: 0.65rem;">Timestamp</th>
+                <th style="padding: 0.65rem;">Action</th>
+                <th style="padding: 0.65rem;">Entity</th>
+                <th style="padding: 0.65rem;">Entity ID</th>
+                <th style="padding: 0.65rem;">User / Actor</th>
+                <th style="padding: 0.65rem;">Metadata</th>
+              </tr>
+            </thead>
+            <tbody id="audit-table-body">
+              <tr>
+                <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-light);">
+                  Loading audit logs...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Complaint Status History -->
+<div id="history-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+  <div style="background: white; border-radius: var(--radius-md); max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; padding: 1.5rem; box-shadow: var(--shadow-lg);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+      <h3 style="margin: 0; color: var(--primary-navy);" id="history-modal-title">Complaint Status History</h3>
+      <button id="btn-close-history" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+    </div>
+    <div id="history-modal-content">
+      Loading history...
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Reassign Officer Department -->
+<div id="reassign-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+  <div style="background: white; border-radius: var(--radius-md); max-width: 450px; width: 90%; padding: 1.5rem; box-shadow: var(--shadow-lg);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+      <h3 style="margin: 0; color: var(--primary-navy);">Reassign Department</h3>
+      <button id="btn-close-reassign" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+    </div>
+    <form id="form-reassign-dept">
+      <input type="hidden" id="reassign-officer-id">
+      <div style="margin-bottom: 1rem;">
+        <label class="form-label">Officer</label>
+        <div id="reassign-officer-name" style="font-weight: 700; color: var(--primary-navy); margin-bottom: 0.5rem;">—</div>
+      </div>
+      <div style="margin-bottom: 1.25rem;">
+        <label class="form-label">New Department</label>
+        <select id="reassign-dept-select" class="form-input" required></select>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+        <button type="button" id="btn-cancel-reassign" class="btn btn-secondary">Cancel</button>
+        <button type="submit" id="btn-submit-reassign" class="btn btn-primary">Save Assignment</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function escapeHtml(text) {
+    if (text === null || text === undefined) return "";
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  let cachedDepartments = [];
+
+  const CATEGORY_MAP = {
+    1: ["General Public Sanitation", "Sanitation Inquiries"],
+    2: ["Urban Planning", "Municipal Permits"],
+    3: ["Water Leakage", "Sewage Overflow"],
+    4: ["Pothole", "Damaged Road"],
+    5: ["Broken Street Light"],
+    6: ["Garbage Overflow", "Illegal Dumping"],
+    7: ["Park/Public Space Damage"],
+    8: ["Traffic Issue"],
+    9: ["Environmental Pollution"],
+    10: ["Building Damage"],
+    11: ["Public Safety", "Hazard Reporting"],
+    12: ["Drainage Problem"]
+  };
+
+  function showAlert(msg, type = "success") {
+    const alertBox = document.getElementById("admin-alert");
+    alertBox.className = `alert alert-${type}`;
+    alertBox.textContent = msg;
+    alertBox.style.display = "block";
+    setTimeout(() => { alertBox.style.display = "none"; }, 5000);
+  }
+
+  // Check Admin RBAC
+  function checkAdminAuth() {
+    if (!ApiClient.isAuthenticated()) {
+      window.location.href = "/login?next=/admin/dashboard";
+      return false;
+    }
+    const user = ApiClient.getCurrentUser();
+    if (!user || user.role !== "ADMIN") {
+      document.getElementById("admin-auth-guard").style.display = "block";
+      document.getElementById("admin-main-content").style.display = "none";
+      setTimeout(() => {
+        if (user && user.role === "OFFICER") {
+          window.location.href = "/officer/dashboard";
+        } else {
+          window.location.href = "/dashboard";
+        }
+      }, 2000);
+      return false;
+    }
+    document.getElementById("admin-name").textContent = user.name || "Administrator";
+    document.getElementById("admin-email").textContent = user.email || "admin@civic.gov";
+    return true;
+  }
+
+  // Load Overview Metrics
+  async function loadOverview() {
+    try {
+      const data = await ApiClient.request("/api/v1/admin/overview");
+      document.getElementById("stat-total-complaints").textContent = data.total_complaints;
+      document.getElementById("stat-pending-complaints").textContent = data.pending_complaints;
+      document.getElementById("stat-resolved-complaints").textContent = data.resolved_complaints;
+      document.getElementById("stat-departments").textContent = data.total_departments;
+      document.getElementById("stat-officers").textContent = data.total_officers;
+      document.getElementById("stat-citizens").textContent = data.total_citizens;
+    } catch (err) {
+      console.error("Failed to load admin overview:", err);
+    }
+  }
+
+  // Load Departments
+  async function loadDepartments() {
+    try {
+      cachedDepartments = await ApiClient.request("/api/v1/admin/departments");
+      const tbody = document.getElementById("departments-table-body");
+      const filterDept = document.getElementById("filter-complaint-dept");
+      const newOffDept = document.getElementById("new-officer-dept");
+      const reassignSelect = document.getElementById("reassign-dept-select");
+
+      // Populate filter dropdown
+      filterDept.innerHTML = `<option value="">All Departments</option>`;
+      newOffDept.innerHTML = `<option value="">Select Department...</option>`;
+      reassignSelect.innerHTML = `<option value="">Select Department...</option>`;
+
+      cachedDepartments.forEach(d => {
+        filterDept.innerHTML += `<option value="${d.id}">${d.id}. ${escapeHtml(d.name)}</option>`;
+        newOffDept.innerHTML += `<option value="${d.id}">${escapeHtml(d.name)}</option>`;
+        reassignSelect.innerHTML += `<option value="${d.id}">${escapeHtml(d.name)}</option>`;
+      });
+
+      // Populate table
+      tbody.innerHTML = cachedDepartments.map(d => {
+        const categories = (CATEGORY_MAP[d.id] || []).join(", ") || "General Municipal";
+        return `
+          <tr style="border-bottom: 1px solid var(--border-color);">
+            <td style="padding: 0.75rem; font-weight: 700;">${d.id}</td>
+            <td style="padding: 0.75rem; font-weight: 600; color: var(--primary-navy);">${escapeHtml(d.name)}</td>
+            <td style="padding: 0.75rem;"><span class="badge" style="background: #e0f2fe; color: #0369a1;">${escapeHtml(categories)}</span></td>
+            <td style="padding: 0.75rem; text-align: center; font-weight: 700;">${d.complaint_count}</td>
+            <td style="padding: 0.75rem; text-align: center; font-weight: 700; color: #7c3aed;">${d.officer_count}</td>
+            <td style="padding: 0.75rem; text-align: center;">
+              <span class="badge" style="background: #dcfce7; color: #15803d;">ACTIVE</span>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    } catch (err) {
+      console.error("Failed to load departments:", err);
+    }
+  }
+
+  // Load Complaints
+  async function loadComplaints() {
+    const deptId = document.getElementById("filter-complaint-dept").value;
+    const status = document.getElementById("filter-complaint-status").value;
+    const sev = document.getElementById("filter-complaint-sev").value;
+
+    let url = "/api/v1/admin/complaints?limit=100";
+    if (deptId) url += `&department_id=${deptId}`;
+    if (status) url += `&status=${status}`;
+    if (sev) url += `&severity=${sev}`;
+
+    const tbody = document.getElementById("complaints-table-body");
+    try {
+      const res = await ApiClient.request(url);
+      if (res.items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-light);">No complaints matching filter criteria.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = res.items.map(c => {
+        const sevClass = `badge-sev-${(c.severity || "low").toLowerCase()}`;
+        const statusClass = `badge-${(c.status || "submitted").toLowerCase().replace(/_/g, "-")}`;
+        const deptLabel = c.department_name ? `<span class="badge" style="background: #e0f2fe; color: #0369a1;">${escapeHtml(c.department_name)}</span>` : `<span class="badge" style="background: #f1f5f9; color: #64748b;">Unassigned</span>`;
+        const citizenLabel = c.user_name ? `${escapeHtml(c.user_name)} <br><small style="color:var(--text-light);">${escapeHtml(c.user_email || "")}</small>` : "Anonymous";
+        const dateStr = new Date(c.created_at).toLocaleDateString();
+
+        return `
+          <tr style="border-bottom: 1px solid var(--border-color);">
+            <td style="padding: 0.75rem; font-family: monospace; font-weight: 700; color: var(--primary-navy);">${escapeHtml(c.complaint_id)}</td>
+            <td style="padding: 0.75rem; font-weight: 600;">
+              ${escapeHtml(c.issue_type_display || c.issue_type)}
+              ${c.place_name ? `<div style="font-size: 0.78rem; font-weight: 600; color: var(--primary-blue); margin-top: 0.15rem;">📍 ${escapeHtml(c.place_name)}</div>` : ''}
+              ${c.address && c.address !== c.place_name ? `<div style="font-size: 0.73rem; color: var(--text-muted); margin-top: 0.05rem;">${escapeHtml(c.address)}</div>` : ''}
+              ${c.latitude && c.longitude ? `<div style="font-size: 0.72rem; color: var(--text-light); margin-top: 0.05rem;">(${Number(c.latitude).toFixed(4)}, ${Number(c.longitude).toFixed(4)})</div>` : ''}
+            </td>
+            <td style="padding: 0.75rem;">${deptLabel}</td>
+            <td style="padding: 0.75rem;"><span class="badge ${sevClass}">${escapeHtml(c.severity)}</span></td>
+            <td style="padding: 0.75rem;"><span class="badge ${statusClass}">${escapeHtml(c.status)}</span></td>
+            <td style="padding: 0.75rem;">${citizenLabel}</td>
+            <td style="padding: 0.75rem; color: var(--text-muted);">${dateStr}</td>
+            <td style="padding: 0.75rem; text-align: center;">
+              <button class="btn btn-secondary btn-sm" onclick="viewHistory('${encodeURIComponent(c.complaint_id)}')" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                📜 History
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 2rem; color: var(--danger-red);">Error loading complaints: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  // Load Officers
+  async function loadOfficers() {
+    const tbody = document.getElementById("officers-table-body");
+    try {
+      const officers = await ApiClient.request("/api/v1/admin/officers");
+      if (officers.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-light);">No officer accounts found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = officers.map(o => {
+        const deptBadge = o.department_name ? `<span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 600;">${escapeHtml(o.department_name)}</span>` : `<span class="badge" style="background: #fee2e2; color: #b91c1c;">Unassigned</span>`;
+        const dateStr = new Date(o.created_at).toLocaleDateString();
+
+        return `
+          <tr style="border-bottom: 1px solid var(--border-color);">
+            <td style="padding: 0.75rem; font-weight: 700;">${o.id}</td>
+            <td style="padding: 0.75rem; font-weight: 700; color: var(--primary-navy);">${escapeHtml(o.name)}</td>
+            <td style="padding: 0.75rem; font-family: monospace;">${escapeHtml(o.email)}</td>
+            <td style="padding: 0.75rem;">${deptBadge}</td>
+            <td style="padding: 0.75rem;"><span class="badge badge-submitted">OFFICER</span></td>
+            <td style="padding: 0.75rem; color: var(--text-muted);">${dateStr}</td>
+            <td style="padding: 0.75rem; text-align: center;">
+              <button class="btn btn-secondary btn-sm" onclick="openReassignModal(${o.id}, decodeURIComponent('${encodeURIComponent(o.name)}'), ${o.department_id})" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                ✏️ Reassign
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--danger-red);">Error loading officers: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  // Load Audit Logs
+  async function loadAuditLogs() {
+    const action = document.getElementById("filter-audit-action").value.trim();
+    let url = "/api/v1/admin/audit-logs?limit=50";
+    if (action) url += `&action=${encodeURIComponent(action)}`;
+
+    const tbody = document.getElementById("audit-table-body");
+    try {
+      const res = await ApiClient.request(url);
+      if (res.items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-light);">No audit records found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = res.items.map(l => {
+        const timeStr = new Date(l.timestamp).toLocaleString();
+        const metaStr = l.metadata ? `<pre style="margin:0; font-size:0.75rem; max-width:250px; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(JSON.stringify(l.metadata))}</pre>` : "—";
+        return `
+          <tr style="border-bottom: 1px solid var(--border-color);">
+            <td style="padding: 0.65rem; color: var(--text-muted); white-space: nowrap;">${timeStr}</td>
+            <td style="padding: 0.65rem;"><span class="badge" style="background:#f1f5f9; color:var(--primary-navy); font-weight:700;">${escapeHtml(l.action)}</span></td>
+            <td style="padding: 0.65rem; font-weight:600;">${escapeHtml(l.entity_type)}</td>
+            <td style="padding: 0.65rem; font-family: monospace;">${escapeHtml(l.entity_id)}</td>
+            <td style="padding: 0.65rem;">${escapeHtml(l.user_email || (l.user_id ? `User #${l.user_id}` : "System"))}</td>
+            <td style="padding: 0.65rem;">${metaStr}</td>
+          </tr>
+        `;
+      }).join("");
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--danger-red);">Error loading audit logs: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  // View Complaint History Modal
+  window.viewHistory = async function(complaintId) {
+    complaintId = decodeURIComponent(complaintId);
+    const modal = document.getElementById("history-modal");
+    const title = document.getElementById("history-modal-title");
+    const content = document.getElementById("history-modal-content");
+    title.textContent = `Status History: ${complaintId}`;
+    content.innerHTML = "<p>Loading history records...</p>";
+    modal.style.display = "flex";
+
+    try {
+      const history = await ApiClient.request(`/api/v1/admin/complaints/${encodeURIComponent(complaintId)}/history`);
+      if (history.length === 0) {
+        content.innerHTML = "<p style='color: var(--text-muted);'>No status transition records found for this complaint.</p>";
+        return;
+      }
+
+      content.innerHTML = history.map(h => {
+        const dateStr = new Date(h.created_at).toLocaleString();
+        const actor = escapeHtml(h.changed_by_name || "System Automated");
+        return `
+          <div style="border-left: 3px solid var(--primary-blue); padding-left: 1rem; margin-bottom: 1rem;">
+            <div style="font-weight: 700; color: var(--primary-navy);">
+              ${escapeHtml(h.old_status || "INITIAL")} &rarr; <span class="badge badge-primary">${escapeHtml(h.new_status)}</span>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem;">
+              Updated by: <strong>${actor}</strong> &bull; ${dateStr}
+            </div>
+            ${h.remarks ? `<div style="font-size: 0.85rem; margin-top: 0.35rem; color: var(--text-main); font-style: italic;">"${escapeHtml(h.remarks)}"</div>` : ""}
+          </div>
+        `;
+      }).join("");
+    } catch (err) {
+      content.innerHTML = `<p style="color: var(--danger-red);">Failed to load history: ${escapeHtml(err.message)}</p>`;
+    }
+  };
+
+  // Reassign Modal
+  window.openReassignModal = function(officerId, officerName, currentDeptId) {
+    document.getElementById("reassign-officer-id").value = officerId;
+    document.getElementById("reassign-officer-name").textContent = officerName;
+    document.getElementById("reassign-dept-select").value = currentDeptId || "";
+    document.getElementById("reassign-modal").style.display = "flex";
+  };
+
+  // Setup Event Listeners
+  document.addEventListener("DOMContentLoaded", () => {
+    if (!checkAdminAuth()) return;
+
+    loadOverview();
+    loadDepartments();
+    loadComplaints();
+    loadOfficers();
+    loadAuditLogs();
+
+    // Tab Switching
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach(b => {
+          b.classList.remove("active");
+          b.style.color = "var(--text-muted)";
+          b.style.borderBottom = "none";
+          b.style.fontWeight = "600";
+        });
+        document.querySelectorAll(".tab-pane").forEach(p => p.style.display = "none");
+
+        btn.classList.add("active");
+        btn.style.color = "var(--primary-blue)";
+        btn.style.borderBottom = "3px solid var(--primary-blue)";
+        btn.style.fontWeight = "700";
+
+        const targetId = btn.getAttribute("data-tab");
+        const targetPane = document.getElementById(targetId);
+        if (targetPane) targetPane.style.display = "block";
+      });
+    });
+
+    // Refresh button
+    document.getElementById("btn-refresh-admin").addEventListener("click", () => {
+      loadOverview();
+      loadDepartments();
+      loadComplaints();
+      loadOfficers();
+      loadAuditLogs();
+      showAlert("Dashboard metrics refreshed.");
+    });
+
+    // Filters
+    document.getElementById("filter-complaint-dept").addEventListener("change", loadComplaints);
+    document.getElementById("filter-complaint-status").addEventListener("change", loadComplaints);
+    document.getElementById("filter-complaint-sev").addEventListener("change", loadComplaints);
+    document.getElementById("btn-filter-audit").addEventListener("click", loadAuditLogs);
+
+    // Add Officer Toggle
+    const addCard = document.getElementById("add-officer-card");
+    document.getElementById("btn-show-add-officer").addEventListener("click", () => {
+      addCard.style.display = addCard.style.display === "none" ? "block" : "none";
+    });
+    document.getElementById("btn-cancel-add-officer").addEventListener("click", () => {
+      addCard.style.display = "none";
+    });
+
+    // Create Officer Form
+    document.getElementById("form-create-officer").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("new-officer-name").value.trim();
+      const email = document.getElementById("new-officer-email").value.trim();
+      const password = document.getElementById("new-officer-password").value;
+      const deptId = document.getElementById("new-officer-dept").value;
+
+      try {
+        await ApiClient.request("/api/v1/admin/officers", {
+          method: "POST",
+          body: JSON.stringify({
+            name,
+            email,
+            password,
+            department_id: deptId ? parseInt(deptId, 10) : null
+          })
+        });
+        showAlert(`Officer account for ${name} created successfully.`);
+        document.getElementById("form-create-officer").reset();
+        addCard.style.display = "none";
+        loadOfficers();
+        loadOverview();
+      } catch (err) {
+        alert("Failed to create officer: " + err.message);
+      }
+    });
+
+    // Reassign Modal Actions
+    document.getElementById("btn-close-reassign").addEventListener("click", () => {
+      document.getElementById("reassign-modal").style.display = "none";
+    });
+    document.getElementById("btn-cancel-reassign").addEventListener("click", () => {
+      document.getElementById("reassign-modal").style.display = "none";
+    });
+    document.getElementById("form-reassign-dept").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const officerId = document.getElementById("reassign-officer-id").value;
+      const newDeptId = document.getElementById("reassign-dept-select").value;
+
+      try {
+        await ApiClient.request(`/api/v1/admin/officers/${officerId}/department`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            department_id: newDeptId ? parseInt(newDeptId, 10) : null
+          })
+        });
+        showAlert("Officer department assignment updated successfully.");
+        document.getElementById("reassign-modal").style.display = "none";
+        loadOfficers();
+        loadDepartments();
+      } catch (err) {
+        alert("Failed to update department: " + err.message);
+      }
+    });
+
+    // Close History Modal
+    document.getElementById("btn-close-history").addEventListener("click", () => {
+      document.getElementById("history-modal").style.display = "none";
+    });
+  });
+</script>
+{% endblock %}

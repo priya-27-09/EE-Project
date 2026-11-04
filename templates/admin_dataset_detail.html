@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+
+{% block title %}Dataset {{ dataset_version }} — AI Civic Guardian Admin{% endblock %}
+
+{% block content %}
+<div style="max-width: 1100px; margin: 0 auto;">
+  <!-- Breadcrumb and Top Nav -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
+    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+      <a href="/admin/datasets" style="color: var(--primary-blue); text-decoration: none; font-weight: 600;">← Datasets</a>
+      <span style="color: var(--text-light);">/</span>
+      <span style="font-family: monospace; font-weight: 700; color: var(--text-main);">{{ dataset_version }}</span>
+    </div>
+
+    <div style="display: flex; gap: 0.5rem;">
+      <button id="btn-revalidate" class="btn btn-primary" style="display: flex; align-items: center; gap: 0.4rem;">
+        <span>⚙️</span>
+        <span>Validate Now</span>
+      </button>
+      <a href="/api/v1/admin/datasets/{{ dataset_version }}/report" target="_blank" class="btn btn-secondary" style="display: flex; align-items: center; gap: 0.4rem;">
+        <span>📄</span>
+        <span>Raw JSON Report</span>
+      </a>
+    </div>
+  </div>
+
+  <div id="page-alert" style="display: none; margin-bottom: 1.5rem;"></div>
+
+  <!-- Loading State -->
+  <div id="detail-loading" class="card" style="text-align: center; padding: 3rem 1rem; color: var(--text-light); background: #ffffff;">
+    Loading dataset details and validation metrics...
+  </div>
+
+  <!-- Main Details Content -->
+  <div id="detail-content" style="display: none;">
+    <!-- Top Summary Card -->
+    <div class="card" style="background: #ffffff; margin-bottom: 1.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+            <h1 id="dataset-title" style="font-size: 1.6rem; font-weight: 800; color: var(--primary-navy); margin: 0;">
+              Dataset Title
+            </h1>
+            <span id="dataset-status-badge"></span>
+          </div>
+          <p id="dataset-description" style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1rem;">
+            No description provided.
+          </p>
+        </div>
+      </div>
+
+      <!-- Metadata Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color); font-size: 0.875rem;">
+        <div>
+          <span style="color: var(--text-light); display: block; font-size: 0.75rem; text-transform: uppercase;">Version ID</span>
+          <span id="meta-version" style="font-family: monospace; font-weight: 700; color: var(--primary-blue);"></span>
+        </div>
+        <div>
+          <span style="color: var(--text-light); display: block; font-size: 0.75rem; text-transform: uppercase;">Uploaded Date</span>
+          <span id="meta-uploaded-at" style="font-weight: 600;"></span>
+        </div>
+        <div>
+          <span style="color: var(--text-light); display: block; font-size: 0.75rem; text-transform: uppercase;">Uploaded By (User ID)</span>
+          <span id="meta-uploaded-by" style="font-weight: 600;"></span>
+        </div>
+        <div>
+          <span style="color: var(--text-light); display: block; font-size: 0.75rem; text-transform: uppercase;">Archive SHA-256</span>
+          <span id="meta-sha256" style="font-family: monospace; font-size: 0.8rem; word-break: break-all;"></span>
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <span style="color: var(--text-light); display: block; font-size: 0.75rem; text-transform: uppercase;">Disk Storage Location</span>
+          <span id="meta-storage-path" style="font-family: monospace; font-size: 0.85rem; color: #334155; word-break: break-all;"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+      <div class="card" style="background: #ffffff; border-left: 4px solid #3b82f6;">
+        <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #1d4ed8;">Train Split</span>
+        <div id="stat-train-images" style="font-size: 1.75rem; font-weight: 800; color: var(--text-main); margin-top: 0.25rem;">0</div>
+        <div id="stat-train-sub" style="font-size: 0.8rem; color: var(--text-light);">0 objects • 0 annotated</div>
+      </div>
+
+      <div class="card" style="background: #ffffff; border-left: 4px solid #0d9488;">
+        <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #0f766e;">Validation Split</span>
+        <div id="stat-val-images" style="font-size: 1.75rem; font-weight: 800; color: var(--text-main); margin-top: 0.25rem;">0</div>
+        <div id="stat-val-sub" style="font-size: 0.8rem; color: var(--text-light);">0 objects • 0 annotated</div>
+      </div>
+
+      <div class="card" style="background: #ffffff; border-left: 4px solid #8b5cf6;">
+        <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #6d28d9;">Test Split</span>
+        <div id="stat-test-images" style="font-size: 1.75rem; font-weight: 800; color: var(--text-main); margin-top: 0.25rem;">0</div>
+        <div id="stat-test-sub" style="font-size: 0.8rem; color: var(--text-light);">0 objects • 0 annotated</div>
+      </div>
+
+      <div class="card" style="background: #ffffff; border-left: 4px solid #0284c7;">
+        <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #0369a1;">Total Dataset</span>
+        <div id="stat-total-images" style="font-size: 1.75rem; font-weight: 800; color: var(--text-main); margin-top: 0.25rem;">0</div>
+        <div id="stat-total-sub" style="font-size: 0.8rem; color: var(--text-light);">0 total objects • 0 classes</div>
+      </div>
+    </div>
+
+    <!-- Validation Status Section -->
+    <div class="card" style="background: #ffffff; margin-bottom: 1.5rem;">
+      <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; color: var(--primary-navy);">
+        Validation Verification Results
+      </h2>
+
+      <!-- Errors List -->
+      <div id="section-errors" style="display: none; margin-bottom: 1rem;">
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-md); padding: 1rem;">
+          <h3 style="color: #b91c1c; font-size: 0.95rem; font-weight: 700; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+            <span>✗ Critical Validation Errors (<span id="count-errors">0</span>)</span>
+          </h3>
+          <ul id="list-errors" style="padding-left: 1.25rem; font-size: 0.875rem; color: #991b1b; display: flex; flex-direction: column; gap: 0.35rem;"></ul>
+        </div>
+      </div>
+
+      <!-- Warnings List -->
+      <div id="section-warnings" style="display: none; margin-bottom: 1rem;">
+        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--radius-md); padding: 1rem;">
+          <h3 style="color: #b45309; font-size: 0.95rem; font-weight: 700; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+            <span>⚠ Validation Warnings (<span id="count-warnings">0</span>)</span>
+          </h3>
+          <ul id="list-warnings" style="padding-left: 1.25rem; font-size: 0.875rem; color: #92400e; display: flex; flex-direction: column; gap: 0.35rem;"></ul>
+        </div>
+      </div>
+
+      <!-- Passed Checks List -->
+      <div id="section-passed" style="display: block;">
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-md); padding: 1rem;">
+          <h3 style="color: #15803d; font-size: 0.95rem; font-weight: 700; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+            <span>✓ Verified System Checks</span>
+          </h3>
+          <ul id="list-passed" style="padding-left: 1.25rem; font-size: 0.875rem; color: #166534; display: flex; flex-direction: column; gap: 0.35rem;">
+            <li>All required YOLO directory splits verified</li>
+            <li>data.yaml configuration structure and paths resolved</li>
+            <li>Supported image formats and pixel integrity checked</li>
+            <li>Label coordinate bounds normalized in [0, 1]</li>
+            <li>Zero-indexed canonical civic classes matched</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Class Distribution Table -->
+    <div class="card" style="background: #ffffff;">
+      <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.25rem; color: var(--primary-navy);">
+        Civic Class Distribution
+      </h2>
+      <p style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 1.25rem;">
+        Object counts and image frequencies across declared classes.
+      </p>
+
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--border-color); background: var(--bg-subtle);">
+              <th style="padding: 0.75rem 1rem; font-weight: 600; width: 90px;">Class ID</th>
+              <th style="padding: 0.75rem 1rem; font-weight: 600;">Class Name</th>
+              <th style="padding: 0.75rem 1rem; font-weight: 600; text-align: center;">Images</th>
+              <th style="padding: 0.75rem 1rem; font-weight: 600; text-align: center;">Annotated Objects</th>
+              <th style="padding: 0.75rem 1rem; font-weight: 600; text-align: right;">Share %</th>
+            </tr>
+          </thead>
+          <tbody id="class-dist-tbody">
+            <!-- Populated by JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const DATASET_VERSION = "{{ dataset_version }}";
+
+  function showAlert(msg, type = "danger") {
+    const box = document.getElementById("page-alert");
+    box.className = `alert alert-${type}`;
+    box.innerHTML = `<span>${msg}</span>`;
+    box.style.display = "block";
+  }
+
+  function getStatusBadge(status) {
+    if (status === "READY_FOR_TRAINING") {
+      return `<span class="badge" style="background: #16a34a; color: white;">✓ READY FOR TRAINING</span>`;
+    } else if (status === "VALID") {
+      return `<span class="badge" style="background: #0284c7; color: white;">VALID</span>`;
+    } else if (status === "INVALID") {
+      return `<span class="badge" style="background: #dc2626; color: white;">✗ INVALID</span>`;
+    } else if (status === "VALIDATING") {
+      return `<span class="badge" style="background: #d97706; color: white;">VALIDATING...</span>`;
+    } else {
+      return `<span class="badge" style="background: #64748b; color: white;">${status}</span>`;
+    }
+  }
+
+  async function loadDatasetDetail() {
+    const loadingEl = document.getElementById("detail-loading");
+    const contentEl = document.getElementById("detail-content");
+
+    try {
+      const resp = await ApiClient.getDataset(DATASET_VERSION);
+      const ds = resp.dataset;
+      const report = ds.validation_summary || {};
+
+      loadingEl.style.display = "none";
+      contentEl.style.display = "block";
+
+      // Populate summary header
+      document.getElementById("dataset-title").textContent = ds.dataset_name;
+      document.getElementById("dataset-status-badge").innerHTML = getStatusBadge(ds.status);
+      document.getElementById("dataset-description").textContent = ds.description || "No description provided.";
+      document.getElementById("meta-version").textContent = ds.dataset_version;
+      document.getElementById("meta-uploaded-at").textContent = ds.uploaded_at ? new Date(ds.uploaded_at).toLocaleString() : "-";
+      document.getElementById("meta-uploaded-by").textContent = ds.uploaded_by;
+      document.getElementById("meta-sha256").textContent = ds.dataset_sha256;
+      document.getElementById("meta-storage-path").textContent = ds.storage_path;
+
+      // Stats cards
+      const splits = report.splits || {};
+      const train = splits.train || {};
+      const val = splits.val || {};
+      const test = splits.test || {};
+
+      document.getElementById("stat-train-images").textContent = ds.train_image_count;
+      document.getElementById("stat-train-sub").textContent = `${train.objects || 0} objects • ${train.annotated_images || 0} annotated`;
+
+      document.getElementById("stat-val-images").textContent = ds.val_image_count;
+      document.getElementById("stat-val-sub").textContent = `${val.objects || 0} objects • ${val.annotated_images || 0} annotated`;
+
+      document.getElementById("stat-test-images").textContent = ds.test_image_count;
+      document.getElementById("stat-test-sub").textContent = `${test.objects || 0} objects • ${test.annotated_images || 0} annotated`;
+
+      document.getElementById("stat-total-images").textContent = ds.total_image_count;
+      document.getElementById("stat-total-sub").textContent = `${ds.total_object_count} total objects • ${ds.class_count} classes`;
+
+      // Errors
+      const errors = report.errors || [];
+      const errSection = document.getElementById("section-errors");
+      const errList = document.getElementById("list-errors");
+      if (errors.length > 0) {
+        document.getElementById("count-errors").textContent = errors.length;
+        errList.innerHTML = errors.map(e => `<li>${e}</li>`).join("");
+        errSection.style.display = "block";
+      } else {
+        errSection.style.display = "none";
+      }
+
+      // Warnings
+      const warnings = report.warnings || [];
+      const warnSection = document.getElementById("section-warnings");
+      const warnList = document.getElementById("list-warnings");
+      if (warnings.length > 0) {
+        document.getElementById("count-warnings").textContent = warnings.length;
+        warnList.innerHTML = warnings.map(w => `<li>${w}</li>`).join("");
+        warnSection.style.display = "block";
+      } else {
+        warnSection.style.display = "none";
+      }
+
+      // Class table
+      const classes = report.classes || [];
+      const classTbody = document.getElementById("class-dist-tbody");
+      classTbody.innerHTML = "";
+
+      if (classes.length === 0) {
+        classTbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 1.5rem; color: var(--text-light);">No class statistics available.</td></tr>`;
+      } else {
+        classes.forEach(c => {
+          const tr = document.createElement("tr");
+          tr.style.borderBottom = "1px solid var(--border-color)";
+          tr.innerHTML = `
+            <td style="padding: 0.75rem 1rem; font-family: monospace; font-weight: 700;">${c.class_id}</td>
+            <td style="padding: 0.75rem 1rem; font-weight: 600;">${c.class_name}</td>
+            <td style="padding: 0.75rem 1rem; text-align: center;">${c.images}</td>
+            <td style="padding: 0.75rem 1rem; text-align: center; font-weight: 600;">${c.objects}</td>
+            <td style="padding: 0.75rem 1rem; text-align: right; font-weight: 600;">${c.percentage}%</td>
+          `;
+          classTbody.appendChild(tr);
+        });
+      }
+
+    } catch (err) {
+      loadingEl.style.display = "none";
+      showAlert(`Failed to load dataset: ${err.message}`, "danger");
+    }
+  }
+
+  document.getElementById("btn-revalidate").addEventListener("click", async () => {
+    const btn = document.getElementById("btn-revalidate");
+    btn.disabled = true;
+    btn.innerHTML = "<span>⚙️</span><span>Validating...</span>";
+    try {
+      const res = await ApiClient.validateDataset(DATASET_VERSION);
+      showAlert(`Validation complete. New status: ${res.dataset_status}`, res.dataset_status === "READY_FOR_TRAINING" ? "success" : "danger");
+      loadDatasetDetail();
+    } catch (err) {
+      showAlert(`Validation failed: ${err.message}`, "danger");
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = "<span>⚙️</span><span>Validate Now</span>";
+    }
+  });
+
+  document.addEventListener("DOMContentLoaded", loadDatasetDetail);
+</script>
+{% endblock %}

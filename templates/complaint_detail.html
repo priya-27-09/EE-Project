@@ -1,0 +1,606 @@
+{% extends "base.html" %}
+
+{% block title %}Complaint Tracking — AI Civic Guardian{% endblock %}
+
+{% block content %}
+<!-- Leaflet Map CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<div style="max-width: 850px; margin: 0 auto;">
+  <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+    <a href="/dashboard" class="btn btn-secondary" style="min-height: 38px; padding: 0.4rem 0.9rem; font-size: 0.85rem;" data-i18n="back_to_dashboard">
+      ← Back to Dashboard
+    </a>
+    <a id="btn-download-letter" href="#" target="_blank" class="btn btn-outline" style="display: none; align-items: center; gap: 0.4rem; min-height: 38px; padding: 0.4rem 1rem; font-size: 0.85rem; background: #f0fdf4; border: 1px solid #86efac; color: #166534; font-weight: 700; border-radius: var(--radius-sm); text-decoration: none;">
+      📄 <span>Download Grievance Letter (PDF)</span>
+    </a>
+  </div>
+
+  <div id="detail-loading" style="text-align: center; padding: 3rem; color: var(--text-light);" data-i18n="loading">
+    Loading complaint details...
+  </div>
+
+  <div id="detail-alert" style="display: none;"></div>
+
+  <div id="detail-content" class="card" style="display: none;">
+    <!-- Title & Badges Header -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1.25rem; margin-bottom: 1.5rem;">
+      <div>
+        <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;" data-i18n="grievance_tracking_num">Grievance Tracking Number</div>
+        <h1 id="complaint-id-header" class="card-title" style="font-size: 1.8rem; color: var(--primary-navy); margin: 0.2rem 0; font-family: monospace;">
+          CG-2026-XXXXXX
+        </h1>
+        <div id="complaint-issue-type" style="font-size: 1.15rem; color: var(--primary-blue); font-weight: 700;">
+          —
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        <span id="badge-severity" class="badge badge-severity-medium">MEDIUM</span>
+        <span id="badge-status" class="badge badge-status-submitted">SUBMITTED</span>
+      </div>
+    </div>
+
+    <!-- Workflow Progress Stepper -->
+    <div style="margin-bottom: 2rem; background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1.25rem;">
+      <h2 style="font-size: 0.95rem; font-weight: 700; color: var(--primary-navy); margin-bottom: 1rem;" data-i18n="workflow_progress">
+        Resolution Workflow Progress
+      </h2>
+      <div class="workflow-stepper" id="detail-workflow-stepper" aria-label="Complaint Workflow Milestones">
+        <div class="workflow-step" id="dt-step-submitted">
+          <div class="wf-circle">1</div>
+          <div class="wf-label" data-i18n="status_submitted">SUBMITTED</div>
+        </div>
+        <div class="wf-line" id="dt-line-1"></div>
+        <div class="workflow-step" id="dt-step-verified">
+          <div class="wf-circle">2</div>
+          <div class="wf-label" data-i18n="status_ai_verified">AI VERIFIED</div>
+        </div>
+        <div class="wf-line" id="dt-line-2"></div>
+        <div class="workflow-step" id="dt-step-assigned">
+          <div class="wf-circle">3</div>
+          <div class="wf-label" data-i18n="status_department_assigned">ASSIGNED</div>
+        </div>
+        <div class="wf-line" id="dt-line-3"></div>
+        <div class="workflow-step" id="dt-step-inprogress">
+          <div class="wf-circle">4</div>
+          <div class="wf-label" data-i18n="status_in_progress">IN PROGRESS</div>
+        </div>
+        <div class="wf-line" id="dt-line-4"></div>
+        <div class="workflow-step" id="dt-step-resolved">
+          <div class="wf-circle">5</div>
+          <div class="wf-label" data-i18n="status_resolved">RESOLVED</div>
+        </div>
+      </div>
+      <div id="detail-human-review-banner" class="alert alert-warning" style="display: none; margin-top: 1rem;">
+        <span style="font-size: 1.25rem;">⚠️</span>
+        <div>
+          <strong>Needs Human Review:</strong>
+          <span style="font-size: 0.85rem;"> Municipal officer review is actively verifying this complaint's categorization or resolution.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Metadata Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+      <div style="background: #f8fafc; padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <div style="font-size: 0.75rem; color: var(--text-light); font-weight: 700; text-transform: uppercase;" data-i18n="assigned_department">ASSIGNED DEPARTMENT</div>
+        <div id="complaint-department" style="font-size: 1rem; font-weight: 700; color: var(--primary-navy); margin-top: 0.25rem;">—</div>
+      </div>
+
+      <div style="background: #f8fafc; padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <div style="font-size: 0.75rem; color: var(--text-light); font-weight: 700; text-transform: uppercase;" data-i18n="gps_coordinates">LOCATION</div>
+        <div id="complaint-location" style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-top: 0.25rem;">—</div>
+      </div>
+
+      <div style="background: #f8fafc; padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <div style="font-size: 0.75rem; color: var(--text-light); font-weight: 700; text-transform: uppercase;" data-i18n="language">LANGUAGE</div>
+        <div id="complaint-language" style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-top: 0.25rem; text-transform: uppercase;">—</div>
+      </div>
+
+      <div style="background: #f8fafc; padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <div style="font-size: 0.75rem; color: var(--text-light); font-weight: 700; text-transform: uppercase;" data-i18n="logged_at">SUBMITTED ON</div>
+        <div id="complaint-created-at" style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-top: 0.25rem;">—</div>
+      </div>
+    </div>
+
+    <!-- Official Resolution Information Box (When Resolved) -->
+    <div id="resolution-info-card" style="display: none; background: #f0fdf4; border: 2px solid #86efac; border-radius: var(--radius-md); padding: 1.5rem; margin-bottom: 2rem;">
+      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+        <span style="font-size: 1.5rem;" aria-hidden="true">✅</span>
+        <h2 style="font-size: 1.15rem; color: #166534; font-weight: 700; margin: 0;" data-i18n="resolution_report_heading">
+          Official Grievance Resolution Report
+        </h2>
+      </div>
+      <p style="font-size: 0.85rem; color: #15803d; margin: 0 0 1rem 0;" data-i18n="resolution_report_sub">
+        This civic grievance has been officially resolved and verified by the designated municipal department.
+      </p>
+
+      <div style="background: #ffffff; border: 1px solid #bbf7d0; border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1rem;">
+        <div style="font-size: 0.8rem; font-weight: 700; color: #166534; text-transform: uppercase; margin-bottom: 0.25rem;" data-i18n="resolution_remarks">
+          Officer Resolution Remarks
+        </div>
+        <div id="resolution-remarks-text" style="font-size: 0.95rem; color: #1e293b; white-space: pre-wrap;">
+          —
+        </div>
+      </div>
+
+      <div id="resolution-evidence-gallery-wrap" style="display: none;">
+        <div style="font-size: 0.8rem; font-weight: 700; color: #166534; text-transform: uppercase; margin-bottom: 0.5rem;" data-i18n="resolution_evidence">
+          Official Resolution Evidence
+        </div>
+        <div id="resolution-evidence-gallery" style="display: flex; gap: 1rem; flex-wrap: wrap;"></div>
+      </div>
+    </div>
+
+    <!-- Description -->
+    <div style="margin-bottom: 2rem;">
+      <h2 style="font-size: 1.1rem; color: var(--primary-navy); margin-bottom: 0.5rem;" data-i18n="grievance_description">Grievance Description</h2>
+      <div id="complaint-description" style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1rem; font-size: 0.95rem; white-space: pre-wrap;">
+        —
+      </div>
+    </div>
+
+    <!-- Evidence Gallery -->
+    <div style="margin-bottom: 2rem;">
+      <h2 style="font-size: 1.1rem; color: var(--primary-navy); margin-bottom: 0.5rem;" data-i18n="attached_evidence">Attached Evidence</h2>
+      <div id="evidence-gallery" style="display: flex; gap: 1rem; flex-wrap: wrap;"></div>
+      <div id="no-evidence-notice" style="color: var(--text-light); font-size: 0.9rem; display: none;" data-i18n="no_evidence_notice">
+        No photographic or video evidence attached to this complaint.
+      </div>
+    </div>
+
+    <!-- Location & Coimbatore Interactive Map Card -->
+    <div id="detail-map-card" style="margin-bottom: 2rem; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1.25rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+          <h2 style="font-size: 1.05rem; font-weight: 700; color: var(--primary-navy); margin: 0;">
+            📍 Coimbatore Location & Satellite View
+          </h2>
+          <div id="detail-map-address" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem;">—</div>
+        </div>
+        <div style="display: flex; gap: 0.35rem;">
+          <button type="button" id="btn-citizen-sat" class="btn btn-secondary" style="min-height: 30px; padding: 0.2rem 0.6rem; font-size: 0.75rem; background: #e0f2fe; color: #0369a1; font-weight: 700;">
+            🛰️ Satellite
+          </button>
+          <button type="button" id="btn-citizen-osm" class="btn btn-secondary" style="min-height: 30px; padding: 0.2rem 0.6rem; font-size: 0.75rem;">
+            🗺️ Street Map
+          </button>
+        </div>
+      </div>
+      <div id="citizen-complaint-map" style="height: 260px; width: 100%; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: #f8fafc;"></div>
+    </div>
+
+    <!-- Hidden Blockchain Integrity Container (Never displayed in normal frontend) -->
+    <div id="citizen-blockchain-card" style="display: none !important;" aria-hidden="true"></div>
+
+    <!-- Status History Timeline -->
+    <div>
+      <h2 style="font-size: 1.1rem; color: var(--primary-navy); margin-bottom: 0.75rem;" data-i18n="status_history_timeline">Status History Timeline</h2>
+      <ul id="status-timeline" class="timeline"></ul>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  if (!ApiClient.isAuthenticated()) {
+    window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+  }
+
+  // Extract complaint_id from server context or URL path
+  const serverComplaintId = "{{ complaint_id or '' }}";
+  const pathParts = window.location.pathname.split("/").filter(Boolean);
+  const complaintId = (serverComplaintId && serverComplaintId !== "None" && serverComplaintId.length > 3) 
+    ? serverComplaintId 
+    : pathParts[pathParts.length - 1];
+  let cachedComplaintData = null;
+
+  async function loadComplaintDetails() {
+    const loadingEl = document.getElementById("detail-loading");
+    const contentEl = document.getElementById("detail-content");
+    const alertBox = document.getElementById("detail-alert");
+
+    loadingEl.style.display = "block";
+    contentEl.style.display = "none";
+    alertBox.style.display = "none";
+
+    if (!complaintId) {
+      loadingEl.style.display = "none";
+      alertBox.className = "alert alert-danger";
+      alertBox.innerHTML = `
+        <div style="font-weight: 700; margin-bottom: 0.5rem;">⚠️ No Complaint Specified</div>
+        <div>No valid complaint tracking identifier was found in URL.</div>
+        <div style="margin-top: 1rem;"><a href="/dashboard" class="btn btn-secondary btn-sm">← Back to Dashboard</a></div>
+      `;
+      alertBox.style.display = "block";
+      return;
+    }
+
+    try {
+      const c = await ApiClient.getComplaint(complaintId);
+      cachedComplaintData = c;
+      loadingEl.style.display = "none";
+      contentEl.style.display = "block";
+      renderComplaintDetails(c);
+    } catch (err) {
+      loadingEl.style.display = "none";
+      contentEl.style.display = "none";
+      alertBox.className = "alert alert-danger";
+      alertBox.innerHTML = `
+        <div style="font-weight: 700; margin-bottom: 0.5rem;">⚠️ Unable to Load Grievance Details</div>
+        <div>${escapeHtml(err.message || "Failed to retrieve complaint data.")}</div>
+        <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+          <button type="button" onclick="loadComplaintDetails()" class="btn btn-primary btn-sm">🔄 Retry</button>
+          <a href="/dashboard" class="btn btn-secondary btn-sm">← Back to Dashboard</a>
+        </div>
+      `;
+      alertBox.style.display = "block";
+    }
+  }
+
+  function updateDetailWorkflowStepper(status) {
+    const s = (status || "").toUpperCase();
+    const steps = ["dt-step-submitted", "dt-step-verified", "dt-step-assigned", "dt-step-inprogress", "dt-step-resolved"];
+    const lines = ["dt-line-1", "dt-line-2", "dt-line-3", "dt-line-4"];
+
+    steps.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.className = "workflow-step";
+    });
+    lines.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.className = "wf-line";
+    });
+
+    const reviewBanner = document.getElementById("detail-human-review-banner");
+    if (reviewBanner) reviewBanner.style.display = s === "NEEDS_HUMAN_REVIEW" ? "flex" : "none";
+
+    let activeLevel = 1;
+    if (s === "RESOLVED") activeLevel = 5;
+    else if (s === "IN_PROGRESS") activeLevel = 4;
+    else if (s === "DEPARTMENT_ASSIGNED") activeLevel = 3;
+    else if (s === "AI_VERIFIED") activeLevel = 2;
+    else activeLevel = 1;
+
+    for (let i = 0; i < activeLevel; i++) {
+      const el = document.getElementById(steps[i]);
+      if (el) el.classList.add("completed");
+      if (i === activeLevel - 1) el.classList.add("active");
+      if (i > 0) {
+        const line = document.getElementById(lines[i - 1]);
+        if (line) line.classList.add("completed");
+      }
+    }
+  }
+
+  function renderComplaintDetails(c) {
+    if (!c) return;
+    try {
+      // Configure Letter Download Link
+      const letterBtn = document.getElementById("btn-download-letter");
+      if (letterBtn && c.complaint_id) {
+        letterBtn.href = `/api/v1/complaints/${encodeURIComponent(c.complaint_id)}/letter/pdf`;
+        letterBtn.style.display = "inline-flex";
+      }
+
+      // Headers & Badges
+      document.getElementById("complaint-id-header").textContent = c.complaint_id;
+    document.getElementById("complaint-issue-type").textContent = tIssue(c.issue_type);
+
+    const severityEl = document.getElementById("badge-severity");
+    severityEl.textContent = tSeverity(c.severity || "MEDIUM");
+    severityEl.className = `badge badge-severity-${(c.severity || "medium").toLowerCase()}`;
+
+    const statusEl = document.getElementById("badge-status");
+    const s = (c.status || "").toUpperCase();
+    if (s === "RESOLVED") {
+      statusEl.textContent = `✓ ${tStatus("RESOLVED")}`;
+      statusEl.className = "badge badge-status-resolved";
+    } else if (s === "NEEDS_HUMAN_REVIEW") {
+      statusEl.textContent = `! ${tStatus("NEEDS_HUMAN_REVIEW")}`;
+      statusEl.className = "badge badge-status-review";
+    } else if (s === "IN_PROGRESS") {
+      statusEl.textContent = `● ${tStatus("IN_PROGRESS")}`;
+      statusEl.className = "badge badge-status-inprogress";
+    } else if (s === "DEPARTMENT_ASSIGNED") {
+      statusEl.textContent = `🏢 ${tStatus("DEPARTMENT_ASSIGNED")}`;
+      statusEl.className = "badge badge-status-assigned";
+    } else if (s === "AI_VERIFIED") {
+      statusEl.textContent = `🤖 ${tStatus("AI_VERIFIED")}`;
+      statusEl.className = "badge badge-status-verified";
+    } else {
+      statusEl.textContent = `⏳ ${tStatus("SUBMITTED")}`;
+      statusEl.className = "badge badge-status-submitted";
+    }
+
+    // Workflow Stepper
+    updateDetailWorkflowStepper(c.status);
+
+    // Department & Location
+    document.getElementById("complaint-department").textContent = c.department ? tDepartment(c.department.name) : t("routing_in_progress");
+    const placePart = c.place_name || "";
+    const addrPart = c.address || "";
+    let locDisplay = "";
+    if (placePart && addrPart && placePart !== addrPart) {
+      locDisplay = `${placePart} — ${addrPart}`;
+    } else {
+      locDisplay = placePart || addrPart;
+    }
+    const coordsPart = (c.latitude !== null && c.longitude !== null && c.latitude !== undefined && c.longitude !== undefined)
+      ? `(Lat: ${Number(c.latitude).toFixed(6)}, Lon: ${Number(c.longitude).toFixed(6)})`
+      : "";
+    const locText = locDisplay
+      ? `${locDisplay} ${coordsPart}`.trim()
+      : (coordsPart ? `Coordinates: ${coordsPart}` : "Coimbatore Municipal Area");
+    document.getElementById("complaint-location").textContent = locText;
+
+    // Render Coimbatore Map
+    renderCitizenMap(c);
+
+    document.getElementById("complaint-language").textContent = c.language ? c.language.toUpperCase() : "EN";
+
+    const createdDate = new Date(c.created_at).toLocaleString();
+    document.getElementById("complaint-created-at").textContent = createdDate;
+
+    // Official Resolution Information Box (When Resolved)
+    const resCard = document.getElementById("resolution-info-card");
+    const resRemarks = document.getElementById("resolution-remarks-text");
+    const resGalleryWrap = document.getElementById("resolution-evidence-gallery-wrap");
+    const resGallery = document.getElementById("resolution-evidence-gallery");
+    resGallery.innerHTML = "";
+
+    const resEvidences = (c.evidences || []).filter(e => e.is_resolution);
+    if (s === "RESOLVED" || c.resolution_note || resEvidences.length > 0) {
+      resCard.style.display = "block";
+      resRemarks.textContent = c.resolution_note || "The grievance has been inspected and remediated by the designated municipal field unit.";
+      
+      if (resEvidences.length > 0) {
+        resGalleryWrap.style.display = "block";
+        resEvidences.forEach(ev => {
+          const item = document.createElement("div");
+          item.style.border = "1px solid #bbf7d0";
+          item.style.borderRadius = "var(--radius-sm)";
+          item.style.padding = "0.75rem";
+          item.style.background = "#ffffff";
+          item.style.maxWidth = "240px";
+
+          let mediaHtml = "";
+          if (ev.file_type.startsWith("image/")) {
+            mediaHtml = `<img src="/${ev.file_path}" alt="Resolution Evidence" style="max-width: 100%; height: 130px; object-fit: cover; border-radius: 4px;">`;
+          } else if (ev.file_type.startsWith("video/")) {
+            mediaHtml = `<video src="/${ev.file_path}" controls style="max-width: 100%; height: 130px;"></video>`;
+          }
+
+          item.innerHTML = `
+            ${mediaHtml}
+            <div style="font-size: 0.72rem; color: #166534; margin-top: 0.4rem; word-break: break-all;">
+              <strong>SHA-256:</strong> ${ev.sha256_hash.substring(0, 16)}...
+            </div>
+            <a href="/${ev.file_path}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="min-height: 28px; padding: 0.2rem 0.5rem; font-size: 0.75rem; margin-top: 0.4rem; width: 100%; text-align: center;">
+              View Resolution File ↗
+            </a>
+          `;
+          resGallery.appendChild(item);
+        });
+      } else {
+        resGalleryWrap.style.display = "none";
+      }
+    } else {
+      resCard.style.display = "none";
+    }
+
+    // Description: Strictly preserve original citizen text
+    const origText = c.original_text || c.description || "(No description provided)";
+    document.getElementById("complaint-description").textContent = origText;
+
+      // Evidence files
+      const gallery = document.getElementById("evidence-gallery");
+      const noEvNotice = document.getElementById("no-evidence-notice");
+      gallery.innerHTML = "";
+
+      if (c.evidences && c.evidences.length > 0) {
+        noEvNotice.style.display = "none";
+        c.evidences.forEach((ev) => {
+          const item = document.createElement("div");
+          item.style.border = "1px solid var(--border-color)";
+          item.style.borderRadius = "var(--radius-sm)";
+          item.style.padding = "0.75rem";
+          item.style.background = "#f8fafc";
+          item.style.maxWidth = "260px";
+
+          const isImage = ev.file_type.startsWith("image/");
+          const isVideo = ev.file_type.startsWith("video/");
+          const isAudio = ev.file_type.startsWith("audio/");
+
+          let mediaHtml = "";
+          if (isImage) {
+            mediaHtml = `<img src="/${ev.file_path}" alt="Evidence" style="max-width: 100%; height: 140px; object-fit: cover; border-radius: 4px;">`;
+          } else if (isVideo) {
+            mediaHtml = `<video src="/${ev.file_path}" controls style="max-width: 100%; height: 140px;"></video>`;
+          } else if (isAudio) {
+            mediaHtml = `<audio src="/${ev.file_path}" controls style="width: 100%; margin: 1rem 0;"></audio>`;
+          }
+
+          let badgeHtml = "";
+          if (ev.is_resolution) {
+            badgeHtml = `<span class="badge" style="background: #dcfce7; color: #166534; font-size: 0.7rem; margin-bottom: 0.35rem; display: inline-block;">✓ Official Resolution Evidence</span>`;
+          }
+
+          item.innerHTML = `
+            ${badgeHtml}
+            ${mediaHtml}
+            <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.5rem; word-break: break-all;">
+              <strong>SHA-256:</strong> ${ev.sha256_hash.substring(0, 16)}...
+            </div>
+            <a href="/${ev.file_path}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="min-height: 30px; padding: 0.2rem 0.5rem; font-size: 0.75rem; margin-top: 0.5rem; width: 100%; text-align: center;">
+              View Original File ↗
+            </a>
+          `;
+          gallery.appendChild(item);
+        });
+      } else {
+        noEvNotice.style.display = "block";
+      }
+
+      // Status Timeline
+      const timeline = document.getElementById("status-timeline");
+      timeline.innerHTML = "";
+
+      if (c.status_history && c.status_history.length > 0) {
+        c.status_history.forEach((h) => {
+          const li = document.createElement("li");
+          li.className = "timeline-item";
+          const dateStr = new Date(h.created_at).toLocaleString();
+          const translatedHistoryStatus = tStatus(h.new_status);
+          li.innerHTML = `
+            <div class="timeline-date">${dateStr}</div>
+            <div class="timeline-content">
+              <strong>${translatedHistoryStatus}</strong>: ${h.remarks || "Status recorded"}
+            </div>
+          `;
+          timeline.appendChild(li);
+        });
+      } else {
+        const transSub = tStatus("SUBMITTED");
+        timeline.innerHTML = `
+          <li class="timeline-item">
+            <div class="timeline-date">${createdDate}</div>
+            <div class="timeline-content"><strong>${transSub}</strong>: Complaint received by municipal system.</div>
+          </li>
+        `;
+      }
+
+    } catch (err) {
+      console.error("Error rendering complaint details:", err);
+      const alertBox = document.getElementById("detail-alert");
+      if (alertBox) {
+        alertBox.className = "alert alert-danger";
+        alertBox.textContent = "Error rendering complaint: " + (err.message || err);
+        alertBox.style.display = "block";
+      }
+    }
+  }
+
+  // ================= CITIZEN COIMBATORE MAP CONTROLLER =================
+  let citizenMapInstance = null;
+  let citizenSatLayer = null;
+  let citizenOsmLayer = null;
+  let citizenMapMode = "satellite";
+
+  async function renderCitizenMap(c) {
+    const mapEl = document.getElementById("citizen-complaint-map");
+    if (!mapEl || typeof L === "undefined") return;
+
+    const lat = c.latitude !== null && c.latitude !== undefined ? c.latitude : 11.0168;
+    const lon = c.longitude !== null && c.longitude !== undefined ? c.longitude : 76.9558;
+
+    const addrEl = document.getElementById("detail-map-address");
+    if (addrEl) {
+      addrEl.textContent = c.address ? c.address : "Coimbatore Municipal Corporation Area";
+    }
+
+    if (citizenMapInstance) {
+      citizenMapInstance.setView([lat, lon], 14);
+      setTimeout(() => citizenMapInstance.invalidateSize(), 150);
+      return;
+    }
+
+    citizenMapInstance = L.map("citizen-complaint-map", {
+      center: [lat, lon],
+      zoom: 14,
+      zoomControl: true,
+    });
+
+    citizenSatLayer = L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      {
+        attribution: "Tiles &copy; Esri &mdash; High-Resolution Satellite Imagery",
+        maxZoom: 19,
+      }
+    );
+
+    citizenOsmLayer = L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        attribution: "&copy; OpenStreetMap contributors",
+        maxZoom: 19,
+      }
+    );
+
+    citizenSatLayer.addTo(citizenMapInstance);
+    citizenMapMode = "satellite";
+
+    // Add CCMC Boundary polygon
+    try {
+      const bRes = await fetch("/api/v1/complaints/boundary");
+      if (bRes.ok) {
+        const bData = await bRes.json();
+        if (bData.polygon) {
+          const latLngs = bData.polygon.map(coord => [coord[1], coord[0]]);
+          L.polygon(latLngs, {
+            color: "#2563eb",
+            weight: 2,
+            opacity: 0.85,
+            fillColor: "#3b82f6",
+            fillOpacity: 0.06,
+            dashArray: "4, 6",
+          }).addTo(citizenMapInstance);
+        }
+      }
+    } catch (e) {
+      console.warn("Could not load boundary polygon:", e);
+    }
+
+    // Add complaint pin marker
+    const marker = L.marker([lat, lon]).addTo(citizenMapInstance);
+    marker.bindPopup(`<b>${c.complaint_id}</b><br>${c.issue_type_display || c.issue_type}<br>${c.address || "Coimbatore"}`).openPopup();
+
+    // Toggle layer buttons
+    const btnSat = document.getElementById("btn-citizen-sat");
+    const btnOsm = document.getElementById("btn-citizen-osm");
+    if (btnSat) {
+      btnSat.addEventListener("click", () => {
+        if (citizenMapMode !== "satellite") {
+          citizenMapInstance.removeLayer(citizenOsmLayer);
+          citizenSatLayer.addTo(citizenMapInstance);
+          citizenMapMode = "satellite";
+          btnSat.style.background = "#e0f2fe";
+          btnSat.style.color = "#0369a1";
+          btnSat.style.fontWeight = "700";
+          if (btnOsm) {
+            btnOsm.style.background = "";
+            btnOsm.style.color = "";
+            btnOsm.style.fontWeight = "";
+          }
+        }
+      });
+    }
+    if (btnOsm) {
+      btnOsm.addEventListener("click", () => {
+        if (citizenMapMode !== "streets") {
+          citizenMapInstance.removeLayer(citizenSatLayer);
+          citizenOsmLayer.addTo(citizenMapInstance);
+          citizenMapMode = "streets";
+          btnOsm.style.background = "#e0f2fe";
+          btnOsm.style.color = "#0369a1";
+          btnOsm.style.fontWeight = "700";
+          if (btnSat) {
+            btnSat.style.background = "";
+            btnSat.style.color = "";
+            btnSat.style.fontWeight = "";
+          }
+        }
+      });
+    }
+
+    setTimeout(() => citizenMapInstance.invalidateSize(), 200);
+  }
+
+  document.addEventListener("DOMContentLoaded", loadComplaintDetails);
+  document.addEventListener("i18n:changed", () => renderComplaintDetails(cachedComplaintData));
+</script>
+{% endblock %}

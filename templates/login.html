@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Citizen Login — AI Civic Guardian{% endblock %}
+
+{% block content %}
+<div style="max-width: 460px; margin: 0 auto;">
+  <div class="card">
+    <h1 class="card-title" data-i18n="citizen_login">Citizen Login</h1>
+    <p class="card-subtitle" data-i18n="citizen_login_sub">Access your citizen portal to lodge and track civic complaints.</p>
+
+    <div id="login-alert" style="display: none;"></div>
+
+    <form id="form-login" novalidate>
+      <div class="form-group">
+        <label for="login-email" class="form-label" data-i18n="email_address">Email Address</label>
+        <input type="email" id="login-email" class="form-input" required placeholder="citizen@example.com" autocomplete="email">
+      </div>
+
+      <div class="form-group">
+        <label for="login-password" class="form-label" data-i18n="password">Password</label>
+        <input type="password" id="login-password" class="form-input" required placeholder="Enter your password" autocomplete="current-password" data-i18n-placeholder="password">
+      </div>
+
+      <button type="submit" id="btn-submit-login" class="btn btn-primary btn-block btn-lg" style="margin-top: 1rem;" data-i18n="log_in_btn">
+        Log In
+      </button>
+    </form>
+
+    <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted);">
+      <span data-i18n="dont_have_account">Don't have an account yet?</span> <a href="/register" style="color: var(--primary-blue); font-weight: 600;" data-i18n="register_here">Register here</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Check URL parameters for notices
+  const params = new URLSearchParams(window.location.search);
+  const alertBox = document.getElementById("login-alert");
+  if (params.get("registered")) {
+    alertBox.className = "alert alert-success";
+    alertBox.textContent = "Your account has been created. Please log in with your credentials.";
+    alertBox.style.display = "block";
+  } else if (params.get("expired")) {
+    alertBox.className = "alert alert-warning";
+    alertBox.textContent = "Your session has expired. Please log in again.";
+    alertBox.style.display = "block";
+  }
+
+  function resolveDestination(user, nextParam) {
+    const role = (user && user.role) ? user.role.toUpperCase() : "CITIZEN";
+    if (nextParam && nextParam !== "/dashboard") {
+      if (nextParam.startsWith("/officer/") && role !== "OFFICER" && role !== "ADMIN") {
+        return "/dashboard";
+      }
+      if (nextParam.startsWith("/admin/") && role !== "ADMIN") {
+        return role === "OFFICER" ? "/officer/dashboard" : "/dashboard";
+      }
+      return nextParam;
+    }
+    if (role === "ADMIN") return "/admin/dashboard";
+    if (role === "OFFICER") return "/officer/dashboard";
+    return "/dashboard";
+  }
+
+  // Redirect if already authenticated
+  if (ApiClient.isAuthenticated()) {
+    const user = ApiClient.getCurrentUser();
+    window.location.href = resolveDestination(user, params.get("next"));
+  }
+
+  document.getElementById("form-login").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    alertBox.style.display = "none";
+
+    const email = document.getElementById("login-email").value.trim();
+    const password = document.getElementById("login-password").value;
+    const submitBtn = document.getElementById("btn-submit-login");
+
+    if (!email || !password) {
+      alertBox.className = "alert alert-danger";
+      alertBox.textContent = "Please enter both your email address and password.";
+      alertBox.style.display = "block";
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Authenticating...";
+
+    try {
+      const loginData = await ApiClient.login(email, password);
+      // Fetch /auth/me to confirm token validity
+      const userProfile = await ApiClient.getMe();
+      ApiClient.setToken(loginData.access_token, userProfile);
+
+      alertBox.className = "alert alert-success";
+      alertBox.textContent = "Authentication successful! Redirecting...";
+      alertBox.style.display = "block";
+
+      const destUrl = resolveDestination(userProfile, params.get("next"));
+      window.location.href = destUrl;
+    } catch (err) {
+      alertBox.className = "alert alert-danger";
+      alertBox.textContent = err.message;
+      alertBox.style.display = "block";
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Log In";
+    }
+  });
+</script>
+{% endblock %}

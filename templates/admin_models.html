@@ -1,0 +1,486 @@
+{% extends "base.html" %}
+
+{% block title %}AI Model Management — AI Civic Guardian Admin{% endblock %}
+
+{% block content %}
+<div style="max-width: 1100px; margin: 0 auto;">
+  <!-- Header Bar -->
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+        <span class="badge badge-primary" style="background: #1e3a8a; color: white;">ADMIN CONSOLE</span>
+        <span style="font-size: 0.85rem; color: var(--text-light);">Ultralytics YOLO Engine</span>
+      </div>
+      <h1 class="hero-title" style="font-size: 1.8rem; margin-bottom: 0.25rem;">
+        AI Model Management
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">
+        Manage, train, validate, and activate official YOLO civic issue detection models.
+      </p>
+    </div>
+
+    <button id="btn-toggle-train-form" class="btn btn-primary btn-lg" style="display: flex; align-items: center; gap: 0.5rem;">
+      <span>🚀</span>
+      <span>Train New Model</span>
+    </button>
+  </div>
+
+  <!-- Global Alerts -->
+  <div id="admin-auth-guard" class="alert alert-warning" style="display: none; margin-bottom: 1.5rem;">
+    <strong>⚠️ Access Restricted:</strong> AI Model management requires Administrator credentials.
+  </div>
+
+  <div id="page-alert" style="display: none; margin-bottom: 1.5rem;"></div>
+
+  <!-- 1. Active Model Section -->
+  <div class="card" style="background: #ffffff; border-left: 4px solid #16a34a; margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+          <span class="badge" style="background: #16a34a; color: white;">ACTIVE DETECTION MODEL</span>
+          <span id="active-model-version" style="font-family: monospace; font-weight: 700; color: var(--primary-navy);"></span>
+        </div>
+        <h2 id="active-model-name" style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.25rem;">
+          Loading active model...
+        </h2>
+        <p id="active-model-dataset" style="font-size: 0.875rem; color: var(--text-light);"></p>
+      </div>
+
+      <div id="active-metrics-wrap" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <!-- Metrics injected via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Train Model Form (Collapsible) -->
+  <div id="train-form-card" class="card" style="display: none; background: #ffffff; border-left: 4px solid var(--primary-blue); margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <div>
+        <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--primary-navy); margin-bottom: 0.25rem;">
+          ⚙️ Train Ultralytics YOLO Detection Model
+        </h2>
+        <p style="font-size: 0.85rem; color: var(--text-light);">
+          Training runs in a controlled background worker. Only datasets marked <code>READY_FOR_TRAINING</code> are eligible.
+        </p>
+      </div>
+      <button id="btn-close-train-form" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--text-light);">&times;</button>
+    </div>
+
+    <!-- Hardware Detection Info Badge -->
+    <div id="hw-info-box" style="background: #f1f5f9; border-radius: var(--radius-sm); padding: 0.65rem 1rem; margin-bottom: 1.25rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+      <span id="hw-device-label">Detecting hardware capabilities...</span>
+      <span id="hw-ultralytics-label" style="font-family: monospace; color: var(--text-muted);"></span>
+    </div>
+
+    <form id="form-train-model">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="select-dataset-version">Verified Dataset Version *</label>
+          <select id="select-dataset-version" class="form-input" required>
+            <option value="">-- Select READY_FOR_TRAINING Dataset --</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="select-base-model">Pretrained Base Model *</label>
+          <select id="select-base-model" class="form-input" required>
+            <option value="yolo11n.pt">YOLO11 Nano (yolo11n.pt) — Recommended</option>
+            <option value="yolo11s.pt">YOLO11 Small (yolo11s.pt)</option>
+            <option value="yolov8n.pt">YOLOv8 Nano (yolov8n.pt)</option>
+            <option value="yolov8s.pt">YOLOv8 Small (yolov8s.pt)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="input-epochs">Epochs</label>
+          <input type="number" id="input-epochs" class="form-input" value="50" min="1" max="500" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="input-imgsz">Image Size (px)</label>
+          <input type="number" id="input-imgsz" class="form-input" value="640" min="128" max="1280" step="32" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="input-batch">Batch Size</label>
+          <input type="number" id="input-batch" class="form-input" value="8" min="1" max="128" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="select-device">Compute Device</label>
+          <select id="select-device" class="form-input">
+            <option value="cpu">CPU</option>
+            <option value="0">CUDA GPU 0</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 1.25rem;">
+        <label class="form-label" for="input-model-name">Custom Model Name (Optional)</label>
+        <input type="text" id="input-model-name" class="form-input" placeholder="e.g. Civic YOLO11n - Phase 1 Municipal Model">
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem; align-items: center;">
+        <button type="button" id="btn-cancel-train" class="btn btn-secondary">Cancel</button>
+        <button type="submit" id="btn-submit-train" class="btn btn-primary" style="min-width: 160px;">
+          <span>Start Training Job</span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 3. Models Table -->
+  <div class="card" style="background: #ffffff;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
+      <div>
+        <h2 class="card-title" style="margin-bottom: 0.25rem;">Model Registry & Lifecycles</h2>
+        <p style="font-size: 0.85rem; color: var(--text-light);">
+          All trained and queued YOLO checkpoints. Only models with verified weights can be activated.
+        </p>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <button id="btn-refresh-models" class="btn btn-secondary" style="min-height: 36px; padding: 0.35rem 0.8rem; font-size: 0.85rem;">
+          🔄 Refresh
+        </button>
+      </div>
+    </div>
+
+    <div id="models-loading" style="text-align: center; padding: 2.5rem 1rem; color: var(--text-light);">
+      Loading model records from PostgreSQL...
+    </div>
+
+    <div id="models-empty" style="display: none; text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+      <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🤖</div>
+      <p style="font-size: 1.1rem; font-weight: 600;">No AI models registered yet.</p>
+      <p style="font-size: 0.9rem; margin-top: 0.35rem;">Click "Train New Model" above to initiate model training on a verified dataset.</p>
+    </div>
+
+    <!-- Table Wrap -->
+    <div id="models-table-wrap" style="display: none; overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.875rem;">
+        <thead>
+          <tr style="border-bottom: 2px solid var(--border-color); background: var(--bg-subtle);">
+            <th style="padding: 0.75rem 1rem; font-weight: 600;">Model Version</th>
+            <th style="padding: 0.75rem 1rem; font-weight: 600;">Model Name & Base</th>
+            <th style="padding: 0.75rem 1rem; font-weight: 600;">Dataset</th>
+            <th style="padding: 0.75rem 1rem; font-weight: 600;">Status</th>
+            <th style="padding: 0.75rem 1rem; font-weight: 600; text-align: center;">mAP50</th>
+            <th style="padding: 0.75rem 1rem; font-weight: 600; text-align: center;">Precision</th>
+            <th style="padding: 0.75rem 1rem; font-weight: 600; text-align: center;">Recall</th>
+            <th style="padding: 0.75rem 1rem; font-weight: 600;">Created</th>
+            <th style="padding: 0.75rem 1rem; font-weight: 600; text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="models-tbody">
+          <!-- Populated by JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function checkAdminAuth() {
+    if (!ApiClient.isAuthenticated()) {
+      window.location.href = "/login?next=/admin/models";
+      return false;
+    }
+    const user = ApiClient.getCurrentUser();
+    if (!user || user.role !== "ADMIN") {
+      document.getElementById("admin-auth-guard").style.display = "block";
+      document.getElementById("btn-toggle-train-form").disabled = true;
+      return false;
+    }
+    return true;
+  }
+
+  function showAlert(msg, type = "danger") {
+    const box = document.getElementById("page-alert");
+    box.className = `alert alert-${type}`;
+    box.innerHTML = `<span>${msg}</span>`;
+    box.style.display = "block";
+  }
+
+  function getStatusBadge(status, isActive) {
+    if (isActive || status === "ACTIVE") {
+      return `<span class="badge" style="background: #16a34a; color: white;">★ ACTIVE</span>`;
+    } else if (status === "COMPLETED") {
+      return `<span class="badge" style="background: #0284c7; color: white;">COMPLETED</span>`;
+    } else if (status === "RUNNING") {
+      return `<span class="badge" style="background: #d97706; color: white;">RUNNING...</span>`;
+    } else if (status === "QUEUED") {
+      return `<span class="badge" style="background: #6366f1; color: white;">QUEUED</span>`;
+    } else if (status === "FAILED") {
+      return `<span class="badge" style="background: #dc2626; color: white;">FAILED</span>`;
+    } else if (status === "ARCHIVED") {
+      return `<span class="badge" style="background: #64748b; color: white;">ARCHIVED</span>`;
+    } else {
+      return `<span class="badge" style="background: #94a3b8; color: white;">${status}</span>`;
+    }
+  }
+
+  // Load hardware capabilities
+  async function loadHardware() {
+    try {
+      const resp = await ApiClient.getHardwareInfo();
+      const hw = resp.hardware;
+      const deviceLabel = hw.cuda_available
+        ? `🟢 Hardware: GPU Available (${hw.device_name}, ${hw.device_count} device)`
+        : `⚙️ Hardware: CPU Execution (${hw.device_name}) • No CUDA GPU`;
+      document.getElementById("hw-device-label").textContent = deviceLabel;
+      document.getElementById("hw-ultralytics-label").textContent = `Ultralytics ${hw.ultralytics_version}`;
+
+      const devSelect = document.getElementById("select-device");
+      devSelect.value = hw.recommended_device;
+      if (!hw.cuda_available) {
+        devSelect.querySelector("option[value='0']").disabled = true;
+      }
+    } catch (e) {
+      document.getElementById("hw-device-label").textContent = "Hardware: CPU Standard Mode";
+    }
+  }
+
+  // Load active model
+  async function loadActiveModel() {
+    const wrap = document.getElementById("active-metrics-wrap");
+    try {
+      const resp = await ApiClient.getActiveModel();
+      if (!resp.active_model) {
+        document.getElementById("active-model-name").textContent = "AI model not trained yet.";
+        document.getElementById("active-model-dataset").textContent = "No active detection model is currently activated.";
+        document.getElementById("active-model-version").textContent = "NONE";
+        wrap.innerHTML = `<span style="font-size: 0.85rem; color: var(--text-light); font-style: italic;">No metrics available</span>`;
+        return;
+      }
+
+      const m = resp.active_model;
+      document.getElementById("active-model-name").textContent = m.model_name;
+      document.getElementById("active-model-version").textContent = m.model_version;
+      document.getElementById("active-model-dataset").textContent = `Trained on ${m.dataset_version} (${m.base_model}, ${m.epochs} epochs)`;
+
+      wrap.innerHTML = `
+        <div style="text-align: center; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-sm); padding: 0.4rem 0.8rem;">
+          <div style="font-size: 0.7rem; font-weight: 700; color: #166534;">mAP50</div>
+          <div style="font-size: 1.15rem; font-weight: 800; color: #15803d;">${m.map50 !== null ? (m.map50 * 100).toFixed(1) + '%' : 'N/A'}</div>
+        </div>
+        <div style="text-align: center; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: var(--radius-sm); padding: 0.4rem 0.8rem;">
+          <div style="font-size: 0.7rem; font-weight: 700; color: #0369a1;">Precision</div>
+          <div style="font-size: 1.15rem; font-weight: 800; color: #0284c7;">${m.precision !== null ? (m.precision * 100).toFixed(1) + '%' : 'N/A'}</div>
+        </div>
+        <div style="text-align: center; background: #fdf4ff; border: 1px solid #f5d0fe; border-radius: var(--radius-sm); padding: 0.4rem 0.8rem;">
+          <div style="font-size: 0.7rem; font-weight: 700; color: #86198f;">Recall</div>
+          <div style="font-size: 1.15rem; font-weight: 800; color: #a21caf;">${m.recall !== null ? (m.recall * 100).toFixed(1) + '%' : 'N/A'}</div>
+        </div>
+      `;
+    } catch (err) {
+      document.getElementById("active-model-name").textContent = "AI model not trained yet.";
+      document.getElementById("active-model-version").textContent = "NONE";
+    }
+  }
+
+  // Populate datasets ready for training
+  async function loadReadyDatasets() {
+    const select = document.getElementById("select-dataset-version");
+    try {
+      const resp = await ApiClient.listDatasets(0, 50);
+      const ready = (resp.datasets || []).filter(d => d.status === "READY_FOR_TRAINING");
+      select.innerHTML = '<option value="">-- Select READY_FOR_TRAINING Dataset --</option>';
+
+      if (ready.length === 0) {
+        select.innerHTML = '<option value="" disabled>No datasets marked READY_FOR_TRAINING</option>';
+        return;
+      }
+
+      ready.forEach(d => {
+        const opt = document.createElement("option");
+        opt.value = d.dataset_version;
+        opt.textContent = `${d.dataset_version} — ${d.dataset_name} (${d.total_image_count} images, ${d.class_count} classes)`;
+        select.appendChild(opt);
+      });
+    } catch (err) {
+      select.innerHTML = '<option value="" disabled>Failed to load datasets</option>';
+    }
+  }
+
+  // Load all models
+  async function loadModels() {
+    if (!checkAdminAuth()) return;
+
+    const loadingEl = document.getElementById("models-loading");
+    const emptyEl = document.getElementById("models-empty");
+    const tableWrap = document.getElementById("models-table-wrap");
+    const tbody = document.getElementById("models-tbody");
+
+    loadingEl.style.display = "block";
+    emptyEl.style.display = "none";
+    tableWrap.style.display = "none";
+    tbody.innerHTML = "";
+
+    try {
+      const resp = await ApiClient.listModels(0, 50);
+      loadingEl.style.display = "none";
+
+      if (!resp.models || resp.models.length === 0) {
+        emptyEl.style.display = "block";
+        return;
+      }
+
+      tableWrap.style.display = "block";
+      resp.models.forEach(m => {
+        const tr = document.createElement("tr");
+        tr.style.borderBottom = "1px solid var(--border-color)";
+
+        const createdDate = m.created_at ? new Date(m.created_at).toLocaleDateString(undefined, {
+          year: "numeric", month: "short", day: "numeric"
+        }) : "-";
+
+        const mapVal = m.map50 !== null ? `${(m.map50 * 100).toFixed(1)}%` : "-";
+        const precVal = m.precision !== null ? `${(m.precision * 100).toFixed(1)}%` : "-";
+        const recVal = m.recall !== null ? `${(m.recall * 100).toFixed(1)}%` : "-";
+
+        const canActivate = m.training_status === "COMPLETED" && !m.is_active;
+
+        tr.innerHTML = `
+          <td style="padding: 0.75rem 1rem; font-family: monospace; font-weight: 700; color: var(--primary-blue);">
+            ${m.model_version}
+          </td>
+          <td style="padding: 0.75rem 1rem;">
+            <div style="font-weight: 600; color: var(--text-main);">${m.model_name}</div>
+            <div style="font-size: 0.75rem; color: var(--text-light); font-family: monospace;">${m.base_model}</div>
+          </td>
+          <td style="padding: 0.75rem 1rem; font-family: monospace; font-size: 0.8rem;">
+            ${m.dataset_version}
+          </td>
+          <td style="padding: 0.75rem 1rem;">
+            ${getStatusBadge(m.training_status, m.is_active)}
+          </td>
+          <td style="padding: 0.75rem 1rem; text-align: center; font-weight: 600;">
+            ${mapVal}
+          </td>
+          <td style="padding: 0.75rem 1rem; text-align: center;">
+            ${precVal}
+          </td>
+          <td style="padding: 0.75rem 1rem; text-align: center;">
+            ${recVal}
+          </td>
+          <td style="padding: 0.75rem 1rem; font-size: 0.8rem; color: var(--text-muted);">
+            ${createdDate}
+          </td>
+          <td style="padding: 0.75rem 1rem; text-align: right;">
+            <div style="display: flex; gap: 0.4rem; justify-content: flex-end;">
+              <a href="/admin/models/${encodeURIComponent(m.model_version)}" class="btn btn-secondary" style="min-height: 30px; padding: 0.2rem 0.6rem; font-size: 0.8rem;">
+                View
+              </a>
+              ${canActivate ? `
+                <button class="btn btn-primary btn-activate-model" data-version="${m.model_version}" style="min-height: 30px; padding: 0.2rem 0.6rem; font-size: 0.8rem;">
+                  Activate
+                </button>
+              ` : ''}
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Attach activate handlers
+      document.querySelectorAll(".btn-activate-model").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+          const v = e.target.getAttribute("data-version");
+          if (!confirm(`Activate model ${v}? This will archive any currently active model.`)) return;
+          e.target.disabled = true;
+          e.target.textContent = "Activating...";
+          try {
+            await ApiClient.activateModel(v);
+            showAlert(`Model ${v} activated successfully!`, "success");
+            loadActiveModel();
+            loadModels();
+          } catch (err) {
+            showAlert(`Activation failed: ${err.message}`, "danger");
+            e.target.disabled = false;
+            e.target.textContent = "Activate";
+          }
+        });
+      });
+
+    } catch (err) {
+      loadingEl.style.display = "none";
+      showAlert(`Failed to load models: ${err.message}`, "danger");
+    }
+  }
+
+  // Toggle train form
+  const trainFormCard = document.getElementById("train-form-card");
+  const toggleBtn = document.getElementById("btn-toggle-train-form");
+  const closeBtn = document.getElementById("btn-close-train-form");
+  const cancelBtn = document.getElementById("btn-cancel-train");
+
+  toggleBtn.addEventListener("click", () => {
+    trainFormCard.style.display = "block";
+    loadReadyDatasets();
+    trainFormCard.scrollIntoView({ behavior: "smooth" });
+  });
+
+  const hideTrainForm = () => { trainFormCard.style.display = "none"; };
+  closeBtn.addEventListener("click", hideTrainForm);
+  cancelBtn.addEventListener("click", hideTrainForm);
+
+  // Submit train form
+  document.getElementById("form-train-model").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const datasetVersion = document.getElementById("select-dataset-version").value;
+    const baseModel = document.getElementById("select-base-model").value;
+    const epochs = parseInt(document.getElementById("input-epochs").value, 10);
+    const imageSize = parseInt(document.getElementById("input-imgsz").value, 10);
+    const batchSize = parseInt(document.getElementById("input-batch").value, 10);
+    const device = document.getElementById("select-device").value;
+    const modelName = document.getElementById("input-model-name").value.trim() || undefined;
+
+    if (!datasetVersion) {
+      showAlert("Please select a verified READY_FOR_TRAINING dataset.", "danger");
+      return;
+    }
+
+    const submitBtn = document.getElementById("btn-submit-train");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Scheduling...";
+
+    try {
+      const resp = await ApiClient.startTraining({
+        dataset_version: datasetVersion,
+        base_model: baseModel,
+        epochs: epochs,
+        image_size: imageSize,
+        batch_size: batchSize,
+        device: device,
+        model_name: modelName,
+      });
+
+      showAlert(`Training job scheduled for ${resp.model_version}. Status: ${resp.training_status}`, "success");
+      hideTrainForm();
+      document.getElementById("form-train-model").reset();
+      loadModels();
+    } catch (err) {
+      showAlert(`Failed to schedule training: ${err.message}`, "danger");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Start Training Job";
+    }
+  });
+
+  document.getElementById("btn-refresh-models").addEventListener("click", () => {
+    loadActiveModel();
+    loadModels();
+  });
+
+  document.addEventListener("DOMContentLoaded", () => {
+    loadHardware();
+    loadActiveModel();
+    loadModels();
+  });
+</script>
+{% endblock %}

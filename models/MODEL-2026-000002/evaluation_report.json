@@ -1,0 +1,89 @@
+{
+  "model_version": "MODEL-2026-000002",
+  "dataset_version": "DS-2026-000018",
+  "evaluation_timestamp": "2026-11-03T12:28:43.658448+00:00",
+  "test_split_image_count": 152,
+  "overall_metrics": {
+    "precision": 0.43813788258531666,
+    "recall": 0.3651550815263567,
+    "mAP50": 0.39319872470629685,
+    "mAP50_95": 0.2256379619276486
+  },
+  "per_class_metrics": {
+    "Garbage Overflow": {
+      "class_id": 0,
+      "status": "EVALUATED",
+      "mAP50_95": 0.024362034282902248
+    },
+    "Illegal Dumping": {
+      "class_id": 1,
+      "status": "EVALUATED",
+      "mAP50_95": 0.36649322951929586
+    },
+    "Pothole": {
+      "class_id": 2,
+      "status": "EVALUATED",
+      "mAP50_95": 0.19657190823819368
+    },
+    "Damaged Road": {
+      "class_id": 3,
+      "status": "EVALUATED",
+      "mAP50_95": 0.0019155596618512598
+    },
+    "Water Leakage": {
+      "class_id": 4,
+      "status": "EVALUATED",
+      "mAP50_95": 0.051533874458469985
+    },
+    "Sewage Overflow": {
+      "class_id": 5,
+      "status": "EVALUATED",
+      "mAP50_95": 0.18602248119042097
+    },
+    "Broken Street Light": {
+      "class_id": 6,
+      "status": "EVALUATED",
+      "mAP50_95": 0.31527100254867557
+    },
+    "Drainage Problem": {
+      "class_id": 7,
+      "status": "NON_EVALUATED",
+      "reason": "Zero verified test samples available in canonical dataset",
+      "ap50": null,
+      "ap50_95": null
+    },
+    "Traffic Issue": {
+      "class_id": 8,
+      "status": "EVALUATED",
+      "mAP50_95": 0.37998418952563773
+    },
+    "Building Damage": {
+      "class_id": 9,
+      "status": "EVALUATED",
+      "mAP50_95": 0.6312500000000001
+    },
+    "Park/Public Space Damage": {
+      "class_id": 10,
+      "status": "EVALUATED",
+      "mAP50_95": 0.18896318475023668
+    },
+    "Environmental Pollution": {
+      "class_id": 11,
+      "status": "EVALUATED",
+      "mAP50_95": 0.1396501170284501
+    }
+  },
+  "class_7_drainage_problem": {
+    "verified_test_samples": 0,
+    "evaluated": false,
+    "handling": "Safe fallback to municipal supervisory review and manual category confirmation"
+  },
+  "training_duration_seconds": 784.1428785324097,
+  "raw_results_dict": {
+    "metrics/precision(B)": 0.43813788258531666,
+    "metrics/recall(B)": 0.3651550815263567,
+    "metrics/mAP50(B)": 0.39319872470629685,
+    "metrics/mAP50-95(B)": 0.2256379619276486,
+    "fitness": 0.2256379619276486
+  }
+}

@@ -1,0 +1,40 @@
+# Render Blueprint Configuration for AI Civic Guardian
+# Unified Single-URL Deployment for Flask (Frontend) + FastAPI (Backend)
+services:
+  - type: web
+    name: ai-civic-guardian
+    runtime: python
+    plan: standard
+    region: singapore # or oregon / frankfurt
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
+    startCommand: "uvicorn asgi_app:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: ENVIRONMENT
+        value: production
+      - key: COIMBATORE_SERVICE_BOUNDARY_ENFORCED
+        value: "false"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: civic-guardian-db
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "1440"
+
+    # Persistent Disk for citizen evidence uploads (photos, videos, audio)
+    disk:
+      name: evidence-uploads
+      mountPath: /opt/render/project/src/uploads
+      sizeGB: 10
+
+# Managed PostgreSQL Database on Render (Optional if using external PostgreSQL)
+databases:
+  - name: civic-guardian-db
+    databaseName: ai_civic_guardian
+    user: civic_admin
+    plan: starter
+    region: singapore
+

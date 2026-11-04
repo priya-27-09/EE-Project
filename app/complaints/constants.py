@@ -1,0 +1,95 @@
+from typing import Dict, Set
+
+# 12 Standard Internal Issue Types
+ISSUE_GARBAGE_OVERFLOW = "garbage_overflow"
+ISSUE_ILLEGAL_DUMPING = "illegal_dumping"
+ISSUE_POTHOLE = "pothole"
+ISSUE_DAMAGED_ROAD = "damaged_road"
+ISSUE_WATER_LEAKAGE = "water_leakage"
+ISSUE_SEWAGE_OVERFLOW = "sewage_overflow"
+ISSUE_BROKEN_STREET_LIGHT = "broken_street_light"
+ISSUE_DRAINAGE_PROBLEM = "drainage_problem"
+ISSUE_TRAFFIC_ISSUE = "traffic_issue"
+ISSUE_BUILDING_DAMAGE = "building_damage"
+ISSUE_PARK_DAMAGE = "park_damage"
+ISSUE_ENVIRONMENTAL_POLLUTION = "environmental_pollution"
+ISSUE_UNCLASSIFIED = "unclassified"
+
+VALID_ISSUE_TYPES: Set[str] = {
+    ISSUE_GARBAGE_OVERFLOW,
+    ISSUE_ILLEGAL_DUMPING,
+    ISSUE_POTHOLE,
+    ISSUE_DAMAGED_ROAD,
+    ISSUE_WATER_LEAKAGE,
+    ISSUE_SEWAGE_OVERFLOW,
+    ISSUE_BROKEN_STREET_LIGHT,
+    ISSUE_DRAINAGE_PROBLEM,
+    ISSUE_TRAFFIC_ISSUE,
+    ISSUE_BUILDING_DAMAGE,
+    ISSUE_PARK_DAMAGE,
+    ISSUE_ENVIRONMENTAL_POLLUTION,
+}
+
+# Human-readable display mapping
+ISSUE_DISPLAY_NAMES: Dict[str, str] = {
+    ISSUE_GARBAGE_OVERFLOW: "Garbage Overflow",
+    ISSUE_ILLEGAL_DUMPING: "Illegal Dumping",
+    ISSUE_POTHOLE: "Pothole",
+    ISSUE_DAMAGED_ROAD: "Damaged Road",
+    ISSUE_WATER_LEAKAGE: "Water Leakage",
+    ISSUE_SEWAGE_OVERFLOW: "Sewage Overflow",
+    ISSUE_BROKEN_STREET_LIGHT: "Broken Street Light",
+    ISSUE_DRAINAGE_PROBLEM: "Drainage Problem",
+    ISSUE_TRAFFIC_ISSUE: "Traffic Issue",
+    ISSUE_BUILDING_DAMAGE: "Building Damage",
+    ISSUE_PARK_DAMAGE: "Park/Public Space Damage",
+    ISSUE_ENVIRONMENTAL_POLLUTION: "Environmental Pollution",
+    ISSUE_UNCLASSIFIED: "Unclassified (Manual Review Required)",
+    "needs_review": "Unclassified (Manual Review Required)",
+}
+
+
+# Status Constants
+STATUS_SUBMITTED = "SUBMITTED"
+STATUS_AI_VERIFIED = "AI_VERIFIED"
+STATUS_VERIFIED = "VERIFIED"
+STATUS_DEPARTMENT_ASSIGNED = "DEPARTMENT_ASSIGNED"
+STATUS_IN_PROGRESS = "IN_PROGRESS"
+STATUS_RESOLVED = "RESOLVED"
+STATUS_NEEDS_HUMAN_REVIEW = "NEEDS_HUMAN_REVIEW"
+STATUS_IN_REVIEW = "IN_REVIEW"  # Legacy/transition compatibility
+STATUS_ASSIGNED = "ASSIGNED"    # Legacy/transition compatibility
+STATUS_REJECTED = "REJECTED"
+
+VALID_STATUSES: Set[str] = {
+    STATUS_SUBMITTED,
+    STATUS_AI_VERIFIED,
+    STATUS_VERIFIED,
+    STATUS_DEPARTMENT_ASSIGNED,
+    STATUS_IN_PROGRESS,
+    STATUS_RESOLVED,
+    STATUS_NEEDS_HUMAN_REVIEW,
+    STATUS_IN_REVIEW,
+    STATUS_ASSIGNED,
+    STATUS_REJECTED,
+}
+
+# Severity Constants
+SEVERITY_LOW = "LOW"
+SEVERITY_MEDIUM = "MEDIUM"
+SEVERITY_HIGH = "HIGH"
+SEVERITY_CRITICAL = "CRITICAL"
+
+VALID_SEVERITIES: Set[str] = {
+    SEVERITY_LOW,
+    SEVERITY_MEDIUM,
+    SEVERITY_HIGH,
+    SEVERITY_CRITICAL,
+}
+
+# Supported Languages
+LANG_EN = "en"
+LANG_TA = "ta"
+LANG_HI = "hi"
+
+VALID_LANGUAGES: Set[str] = {LANG_EN, LANG_TA, LANG_HI}

@@ -1,0 +1,32 @@
+CITIZEN'S CHARTER AND CIVIC GRIEVANCE REDRESSAL SERVICE LEVEL AGREEMENTS
+Department of Administrative Reforms and Public Grievances (DARPG Model Municipal Citizen Charter)
+Source: https://darpg.gov.in/citizen-charter
+Department: Administration
+Document ID: DOC-2026-000004
+Version: 1.0
+
+1. CITIZEN RIGHTS AND CIVIC GUARANTEE
+Every resident of the municipality has a statutory right to prompt, transparent, and accountable redressal of civic grievances relating to public health, roads, streetlights, drainage, water supply, and municipal solid waste.
+
+2. SERVICE LEVEL AGREEMENT (SLA) TIMELINES
+When a grievance is formally submitted through the AI Civic Guardian portal, the following maximum time bounds apply:
+- Garbage Overflow and Open Dumping: 12 Hours
+- Streetlight Breakdown / Dark Spots: 24 Hours
+- Major Potholes on Arterial Roads: 24 Hours
+- Residential Road Surface Repair: 48 to 72 Hours
+- Potable Water Supply Main Bursts: 8 to 12 Hours
+- Open Manhole / Hazardous Drainage Cover: 6 Hours (Immediate Emergency Barricading within 1 hour)
+- Dead Animal Carcass Removal: 6 Hours
+- Illegal Tree Branch Fall / Road Blockage: 8 Hours
+
+3. THREE-TIER ESCALATION MATRIX
+If a grievance is not resolved within the specified SLA timeline, the system automatically escalates the complaint:
+- Level 1 (Initial Assignment): Ward Junior Engineer / Sanitary Inspector. SLA: 0 to 24/48 hours.
+- Level 2 (First Escalation): Assistant Executive Engineer / Zonal Health Officer. Escalated on Day 3.
+- Level 3 (Final Escalation): Additional Municipal Commissioner / Public Grievance Redressal Officer. Escalated on Day 5.
+
+4. CITIZEN RE-OPENING AND APPEAL RIGHTS
+Upon status changing to "RESOLVED", the citizen receives an automated notification with official resolution evidence. If the physical condition remains unsatisfactory, the citizen has the statutory right to re-open the complaint within 7 days of resolution by submitting counter-photographic evidence. Re-opened complaints bypass Level 1 and route directly to the Zonal Executive Engineer.
+
+5. BLOCKCHAIN AND AUDIT INTEGRITY ASSURANCE
+To ensure complete administrative transparency and prevent unauthorized backdating or tampering of complaint status, all critical lifecycle milestones (Registration, Status Changes, Evidence Uploads, and Verification Reviews) are immutably anchored to the municipal audit trail.

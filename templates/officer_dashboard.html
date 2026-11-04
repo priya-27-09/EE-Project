@@ -1,0 +1,973 @@
+{% extends "base.html" %}
+
+{% block title %}Officer Dashboard — AI Civic Guardian{% endblock %}
+
+{% block content %}
+<div style="max-width: 1100px; margin: 0 auto;">
+  <!-- Header Bar -->
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; background: #ffffff; padding: 1.5rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+    <div>
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
+        <span style="font-size: 1.7rem;">🛡️</span>
+        <h1 style="font-size: 1.6rem; color: var(--primary-navy); margin: 0; font-weight: 700;">
+          <span data-i18n="officer_dashboard">Officer Dashboard</span>
+        </h1>
+        <span id="officer-role-badge" class="badge badge-submitted" style="font-size: 0.75rem; letter-spacing: 0.05em;">OFFICER</span>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.95rem; margin: 0;">
+        <span data-i18n="welcome">Welcome</span>, <strong id="officer-name">—</strong> | 
+        <span data-i18n="assigned_department">Assigned Department</span>: <strong id="officer-dept-name" style="color: var(--primary-blue);">—</strong>
+      </p>
+    </div>
+
+    <div>
+      <button id="btn-refresh-dashboard" class="btn btn-secondary" style="min-height: 40px; padding: 0.4rem 1rem; font-size: 0.9rem;">
+        🔄 <span data-i18n="refresh">Refresh</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div id="officer-loading" style="text-align: center; padding: 3rem; color: var(--text-light);" data-i18n="loading">
+    Loading official department records from PostgreSQL...
+  </div>
+
+  <div id="officer-alert" style="display: none; margin-bottom: 1.5rem;"></div>
+
+  <!-- Main Dashboard Content -->
+  <div id="officer-main-content" style="display: none;">
+    <!-- Metric Summary Cards Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+      <!-- Total Assigned -->
+      <div class="card" style="padding: 1.1rem; text-align: center; border-left: 4px solid var(--primary-navy);">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;" data-i18n="total_assigned">Total Assigned</div>
+        <div id="count-total" style="font-size: 1.8rem; font-weight: 800; color: var(--primary-navy); margin-top: 0.35rem;">0</div>
+      </div>
+
+      <!-- Submitted -->
+      <div class="card" style="padding: 1.1rem; text-align: center; border-left: 4px solid var(--info-blue);">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;" data-i18n="submitted">Submitted</div>
+        <div id="count-submitted" style="font-size: 1.8rem; font-weight: 800; color: var(--info-blue); margin-top: 0.35rem;">0</div>
+      </div>
+
+      <!-- AI Verified -->
+      <div class="card" style="padding: 1.1rem; text-align: center; border-left: 4px solid var(--accent-teal);">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;" data-i18n="ai_verified">AI Verified</div>
+        <div id="count-ai-verified" style="font-size: 1.8rem; font-weight: 800; color: var(--accent-teal); margin-top: 0.35rem;">0</div>
+      </div>
+
+      <!-- Dept Assigned -->
+      <div class="card" style="padding: 1.1rem; text-align: center; border-left: 4px solid #6366f1;">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;" data-i18n="department_assigned">Dept Assigned</div>
+        <div id="count-dept-assigned" style="font-size: 1.8rem; font-weight: 800; color: #6366f1; margin-top: 0.35rem;">0</div>
+      </div>
+
+      <!-- In Progress -->
+      <div class="card" style="padding: 1.1rem; text-align: center; border-left: 4px solid var(--warning-amber);">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;" data-i18n="in_progress">In Progress</div>
+        <div id="count-in-progress" style="font-size: 1.8rem; font-weight: 800; color: var(--warning-amber); margin-top: 0.35rem;">0</div>
+      </div>
+
+      <!-- Needs Human Review -->
+      <div class="card" style="padding: 1.1rem; text-align: center; border-left: 4px solid var(--danger-red);">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;" data-i18n="needs_human_review">Review Needed</div>
+        <div id="count-review" style="font-size: 1.8rem; font-weight: 800; color: var(--danger-red); margin-top: 0.35rem;">0</div>
+      </div>
+
+      <!-- Resolved -->
+      <div class="card" style="padding: 1.1rem; text-align: center; border-left: 4px solid var(--success-green);">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;" data-i18n="resolved">Resolved</div>
+        <div id="count-resolved" style="font-size: 1.8rem; font-weight: 800; color: var(--success-green); margin-top: 0.35rem;">0</div>
+      </div>
+    </div>
+
+    <!-- Filter & Search Toolbar Card -->
+    <div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem; background: #ffffff;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+        <h2 style="font-size: 1.1rem; color: var(--primary-navy); margin: 0; font-weight: 700;">
+          🔍 <span data-i18n="filter_and_search">Filter Department Grievances</span>
+        </h2>
+        <button id="btn-reset-filters" class="btn btn-secondary" style="min-height: 34px; padding: 0.25rem 0.75rem; font-size: 0.8rem;">
+          <span data-i18n="reset">Reset Filters</span>
+        </button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
+        <!-- Status Filter -->
+        <div>
+          <label for="filter-status" style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.25rem;" data-i18n="filter_status">Status</label>
+          <select id="filter-status" class="form-control" style="width: 100%; height: 38px; font-size: 0.85rem;">
+            <option value="">All Statuses</option>
+            <option value="SUBMITTED">Submitted</option>
+            <option value="AI_VERIFIED">AI Verified</option>
+            <option value="DEPARTMENT_ASSIGNED">Department Assigned</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="NEEDS_HUMAN_REVIEW">Needs Human Review</option>
+            <option value="RESOLVED">Resolved</option>
+          </select>
+        </div>
+
+        <!-- Severity Filter -->
+        <div>
+          <label for="filter-severity" style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.25rem;" data-i18n="filter_severity">Severity</label>
+          <select id="filter-severity" class="form-control" style="width: 100%; height: 38px; font-size: 0.85rem;">
+            <option value="">All Severities</option>
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+            <option value="CRITICAL">Critical</option>
+          </select>
+        </div>
+
+        <!-- Issue Type Filter (Strict Department Isolation) -->
+        <div>
+          <label for="filter-issue-type" style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.25rem;" data-i18n="filter_issue">Issue Type</label>
+          <select id="filter-issue-type" class="form-control" style="width: 100%; height: 38px; font-size: 0.85rem;">
+            <option value="">All Department Issues</option>
+          </select>
+        </div>
+
+        <!-- Search Input -->
+        <div>
+          <label for="filter-search" style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.25rem;" data-i18n="search">Search</label>
+          <input type="text" id="filter-search" class="form-control" placeholder="Complaint ID (e.g. CG-2026...)" style="width: 100%; height: 38px; font-size: 0.85rem;">
+        </div>
+      </div>
+    </div>
+
+    <!-- Complaint Table Card -->
+    <div class="card" style="padding: 0; overflow: hidden; background: #ffffff;">
+      <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+          <h2 style="font-size: 1.1rem; color: var(--primary-navy); margin: 0; font-weight: 700;">
+            📋 <span data-i18n="assigned_complaints">Assigned Department Grievances</span>
+          </h2>
+          <p style="font-size: 0.8rem; color: var(--text-light); margin: 0.2rem 0 0 0;">
+            Showing real complaints stored in PostgreSQL assigned to your jurisdiction.
+          </p>
+        </div>
+        <div id="table-total-count" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">
+          Total: 0
+        </div>
+      </div>
+
+      <!-- Table Container -->
+      <div style="overflow-x: auto;">
+        <table class="table" style="width: 100%; margin: 0; border-collapse: collapse; font-size: 0.875rem;">
+          <thead style="background: #f8fafc; border-bottom: 2px solid var(--border-color);">
+            <tr>
+              <th style="padding: 0.75rem 1rem; text-align: left; font-weight: 700; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">ID</th>
+              <th style="padding: 0.75rem 1rem; text-align: left; font-weight: 700; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">Issue</th>
+              <th style="padding: 0.75rem 1rem; text-align: left; font-weight: 700; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">Severity</th>
+              <th style="padding: 0.75rem 1rem; text-align: left; font-weight: 700; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">Status</th>
+              <th style="padding: 0.75rem 1rem; text-align: left; font-weight: 700; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">Date / Time</th>
+              <th style="padding: 0.75rem 1rem; text-align: left; font-weight: 700; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">AI / Duplicates</th>
+              <th style="padding: 0.75rem 1rem; text-align: right; font-weight: 700; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="complaints-table-body">
+            <!-- Dynamic Rows -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty State -->
+      <div id="table-empty-state" style="display: none; text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📭</div>
+        <p style="font-weight: 600; font-size: 1rem;">No grievances found for current filters</p>
+        <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 0.25rem;">Try clearing or changing your filters above.</p>
+      </div>
+
+      <!-- Pagination Footer -->
+      <div id="pagination-controls" style="display: flex; justify-content: space-between; align-items: center; padding: 0.875rem 1.5rem; background: #f8fafc; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
+        <div id="page-info" style="font-size: 0.85rem; color: var(--text-muted);">
+          Page 1 of 1
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button id="btn-prev-page" class="btn btn-secondary" style="min-height: 32px; padding: 0.2rem 0.75rem; font-size: 0.8rem;" disabled>
+            ← Previous
+          </button>
+          <button id="btn-next-page" class="btn btn-secondary" style="min-height: 32px; padding: 0.2rem 0.75rem; font-size: 0.8rem;" disabled>
+            Next →
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Complaint Full Details Modal -->
+  <div id="complaint-details-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); z-index: 1050; justify-content: center; align-items: center; padding: 1.25rem; overflow-y: auto;">
+    <div style="background: #ffffff; border-radius: 12px; width: 100%; max-width: 950px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35); overflow: hidden; border: 1px solid var(--border-color); animation: modalFadeIn 0.2s ease-out;">
+      
+      <!-- Modal Header -->
+      <div style="padding: 1.15rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #f8fafc; flex-shrink: 0;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+          <span style="font-size: 1.35rem;">📋</span>
+          <h3 id="modal-complaint-id" style="margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--primary-navy);">Grievance Details</h3>
+          <span id="modal-status-badge" class="badge">--</span>
+          <span id="modal-severity-badge" class="badge">--</span>
+        </div>
+        <button id="btn-modal-close" type="button" style="background: #e2e8f0; border: none; font-size: 1.25rem; font-weight: 700; color: var(--text-muted); width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" title="Close Modal (Esc)">✕</button>
+      </div>
+
+      <!-- Modal Scrollable Body -->
+      <div id="modal-body" style="padding: 1.5rem; overflow-y: auto; flex: 1;">
+        
+        <!-- Loading State -->
+        <div id="modal-loading-state" style="text-align: center; padding: 3.5rem 1rem;">
+          <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top: 4px solid var(--primary-blue); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+          <p style="margin-top: 1rem; color: var(--text-muted); font-weight: 600; font-size: 0.95rem;">Loading full grievance details...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="modal-error-state" style="display: none; padding: 1.5rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; color: #991b1b; text-align: center;">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚠️</div>
+          <h4 style="margin: 0 0 0.5rem 0; font-size: 1.05rem; font-weight: 700;">Unable to Display Grievance</h4>
+          <p id="modal-error-text" style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #b91c1c;">Error details</p>
+          <button id="btn-modal-error-close" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.35rem 1rem;">Dismiss</button>
+        </div>
+
+        <!-- Main Data Details Container -->
+        <div id="modal-details-container" style="display: none;">
+          
+          <!-- Metadata 4-Box Grid -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+            <!-- Category & Dept -->
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.85rem 1rem;">
+              <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Category &amp; Jurisdiction</div>
+              <div id="modal-issue-name" style="font-size: 0.95rem; font-weight: 700; color: var(--primary-navy); margin-top: 0.25rem;">--</div>
+              <div id="modal-department-name" style="font-size: 0.8rem; color: var(--primary-blue); font-weight: 600; margin-top: 0.15rem;">--</div>
+            </div>
+
+            <!-- Complainant Citizen Details (Permitted for Officer Role) -->
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.85rem 1rem;">
+              <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Complainant (Citizen)</div>
+              <div id="modal-citizen-name" style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-top: 0.25rem;">--</div>
+              <div id="modal-citizen-contact" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.15rem;">--</div>
+            </div>
+
+            <!-- Submission Date & AI Assessment -->
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.85rem 1rem;">
+              <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Submitted / AI Status</div>
+              <div id="modal-submission-date" style="font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-top: 0.25rem;">--</div>
+              <div id="modal-ai-status" style="font-size: 0.8rem; color: #0284c7; margin-top: 0.15rem;">--</div>
+            </div>
+
+            <!-- Coordinates / Location -->
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.85rem 1rem;">
+              <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Location / GPS Coordinates</div>
+              <div id="modal-coords" style="font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-top: 0.25rem;">--</div>
+              <div id="modal-maps-link" style="margin-top: 0.25rem; font-size: 0.8rem;"></div>
+            </div>
+          </div>
+
+          <!-- Description Card -->
+          <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
+            <h4 style="font-size: 0.85rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); margin: 0 0 0.5rem 0;">Citizen Grievance Description</h4>
+            <div id="modal-description" style="font-size: 0.95rem; color: var(--text-main); line-height: 1.5; white-space: pre-wrap; background: #f8fafc; padding: 0.85rem; border-radius: 6px; border: 1px solid #e2e8f0;">--</div>
+          </div>
+
+          <!-- Evidence Gallery -->
+          <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <h4 style="font-size: 0.85rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); margin: 0;">Attached Evidence &amp; Visual Media</h4>
+              <span id="modal-evidence-count" class="badge" style="background: #f1f5f9; color: #475569;">0 items</span>
+            </div>
+            <div id="modal-evidence-gallery" style="display: flex; gap: 1rem; flex-wrap: wrap;"></div>
+            <div id="modal-no-evidence" style="display: none; color: var(--text-light); font-size: 0.85rem; font-style: italic; padding: 0.5rem 0;">No media evidence attached to this complaint.</div>
+          </div>
+
+          <!-- Two Column: Status History & Officer Notes -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem;">
+            <!-- Status History Timeline -->
+            <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem 1.25rem;">
+              <h4 style="font-size: 0.85rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); margin: 0 0 0.75rem 0;">Status History &amp; Audit Trail</h4>
+              <ul id="modal-status-timeline" style="list-style: none; padding: 0; margin: 0;"></ul>
+              <div id="modal-no-history" style="display: none; color: var(--text-light); font-size: 0.85rem; font-style: italic;">No status transitions recorded yet.</div>
+            </div>
+
+            <!-- Officer Operational Notes -->
+            <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem 1.25rem;">
+              <h4 style="font-size: 0.85rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); margin: 0 0 0.75rem 0;">Officer Notes &amp; Remarks</h4>
+              <div id="modal-notes-container"></div>
+              <div id="modal-no-notes" style="display: none; color: var(--text-light); font-size: 0.85rem; font-style: italic;">No internal officer notes logged.</div>
+            </div>
+          </div>
+
+          <!-- Blockchain Audit Trail (Hidden from UI) -->
+          <div id="modal-blockchain-card" style="display: none !important;" aria-hidden="true">
+            <div id="modal-blockchain-status-pill"></div>
+            <div id="modal-blockchain-milestones"></div>
+            <div id="modal-blockchain-records"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Modal Footer Actions -->
+      <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); background: #f8fafc; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; flex-wrap: wrap; gap: 0.75rem;">
+        <button id="btn-modal-footer-close" type="button" class="btn btn-secondary" style="min-height: 38px; padding: 0.4rem 1.25rem; font-size: 0.875rem; cursor: pointer;">
+          Close
+        </button>
+        <a id="btn-modal-full-manage" href="#" class="btn btn-primary" style="min-height: 38px; padding: 0.4rem 1.25rem; font-size: 0.875rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+          Open Full Officer Workspace →
+        </a>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Strict officer authentication check
+  if (!ApiClient.isAuthenticated()) {
+    window.location.href = "/login?next=/officer/dashboard";
+  }
+
+  const currentUser = ApiClient.getCurrentUser();
+  const currentRole = (currentUser && currentUser.role) ? currentUser.role.toUpperCase() : "";
+  if (currentUser && currentRole !== "OFFICER" && currentRole !== "ADMIN") {
+    alert("Access restricted: You must be an authorized officer to view this dashboard.");
+    window.location.href = "/dashboard";
+  }
+
+  let currentPage = 1;
+  const pageSize = 10;
+  let totalPages = 1;
+
+  async function loadOfficerDashboardData() {
+    const loadingEl = document.getElementById("officer-loading");
+    const mainContent = document.getElementById("officer-main-content");
+    const alertBox = document.getElementById("officer-alert");
+
+    loadingEl.style.display = "block";
+    mainContent.style.display = "none";
+    alertBox.style.display = "none";
+
+    try {
+      // 1. Fetch real summary statistics
+      const summary = await ApiClient.getOfficerDashboard();
+
+      document.getElementById("officer-name").textContent = summary.officer_name || currentUser.name || "Officer";
+      document.getElementById("officer-dept-name").textContent = summary.department_name ? tDepartment(summary.department_name) : "Municipal Administration";
+      document.getElementById("officer-role-badge").textContent = summary.officer_role;
+
+      document.getElementById("count-total").textContent = summary.total_assigned;
+      document.getElementById("count-submitted").textContent = summary.submitted;
+      document.getElementById("count-ai-verified").textContent = summary.ai_verified;
+      document.getElementById("count-dept-assigned").textContent = summary.department_assigned;
+      document.getElementById("count-in-progress").textContent = summary.in_progress;
+      document.getElementById("count-resolved").textContent = summary.resolved;
+      document.getElementById("count-review").textContent = summary.needs_human_review;
+
+      // Populate Issue Type Filter strictly for this Officer's Department
+      const issueSelect = document.getElementById("filter-issue-type");
+      if (issueSelect && summary.allowed_issue_types && summary.allowed_issue_types.length > 0) {
+        const curVal = issueSelect.value;
+        const deptLabel = summary.department_name ? tDepartment(summary.department_name) : "Department";
+        issueSelect.innerHTML = `<option value="">All ${escapeHtml(deptLabel)} Issues</option>`;
+        summary.allowed_issue_types.forEach(item => {
+          const opt = document.createElement("option");
+          opt.value = item.key;
+          opt.textContent = (typeof tIssue === "function") ? tIssue(item.key) : (item.display || item.key);
+          if (opt.value === curVal) opt.selected = true;
+          issueSelect.appendChild(opt);
+        });
+      }
+
+      // 2. Fetch complaint table rows
+      await loadComplaintsTable();
+
+      loadingEl.style.display = "none";
+      mainContent.style.display = "block";
+    } catch (err) {
+      loadingEl.style.display = "none";
+      alertBox.style.display = "block";
+      alertBox.innerHTML = `
+        <div class="alert alert-danger" role="alert">
+          <strong>Dashboard Access Error:</strong> ${err.message || "Failed to load officer dashboard data from database."}
+        </div>
+      `;
+    }
+  }
+
+  async function loadComplaintsTable() {
+    const tbody = document.getElementById("complaints-table-body");
+    const emptyState = document.getElementById("table-empty-state");
+    const totalCountEl = document.getElementById("table-total-count");
+    const pageInfo = document.getElementById("page-info");
+    const btnPrev = document.getElementById("btn-prev-page");
+    const btnNext = document.getElementById("btn-next-page");
+
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 1.5rem; color: var(--text-light);">Loading complaints...</td></tr>`;
+    emptyState.style.display = "none";
+
+    const params = {
+      page: currentPage,
+      page_size: pageSize,
+      status: document.getElementById("filter-status").value,
+      severity: document.getElementById("filter-severity").value,
+      issue_type: document.getElementById("filter-issue-type").value,
+      search: document.getElementById("filter-search").value.trim(),
+    };
+
+    try {
+      const data = await ApiClient.listOfficerComplaints(params);
+      totalPages = data.total_pages || 1;
+      totalCountEl.textContent = `Total: ${data.total}`;
+      pageInfo.textContent = `Page ${data.page} of ${totalPages} (${data.total} grievances)`;
+
+      btnPrev.disabled = data.page <= 1;
+      btnNext.disabled = data.page >= totalPages;
+
+      if (!data.items || data.items.length === 0) {
+        tbody.innerHTML = "";
+        emptyState.style.display = "block";
+        return;
+      }
+
+      tbody.innerHTML = "";
+      data.items.forEach((c) => {
+        const row = document.createElement("tr");
+        row.style.borderBottom = "1px solid var(--border-color)";
+
+        // Severity badge
+        const sevClass = `badge-severity-${(c.severity || "medium").toLowerCase()}`;
+        const sevTranslated = tSeverity(c.severity);
+
+        // Status badge
+        let statusClass = "badge-submitted";
+        const st = (c.status || "").toUpperCase();
+        if (st === "IN_PROGRESS") statusClass = "badge-in-progress";
+        else if (st === "RESOLVED") statusClass = "badge-resolved";
+        else if (st === "NEEDS_HUMAN_REVIEW") statusClass = "badge-needs-review";
+        else if (st === "AI_VERIFIED") statusClass = "badge-ai-verified";
+        const statusTranslated = tStatus(c.status);
+
+        // Date
+        const dateStr = new Date(c.created_at).toLocaleString(undefined, {
+          year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
+        });
+
+        // AI / Duplicates indicators
+        let indicators = [];
+        if (c.ai_confidence !== null && c.ai_confidence !== undefined) {
+          indicators.push(`<span class="badge" style="background:#e0f2fe; color:#0369a1; font-size:0.7rem;">AI: ${(c.ai_confidence * 100).toFixed(0)}%</span>`);
+        } else {
+          indicators.push(`<span style="font-size:0.7rem; color:var(--text-light);">No AI Model</span>`);
+        }
+
+        if (c.has_duplicate_warning) {
+          indicators.push(`<span class="badge" style="background:#fef3c7; color:#92400e; font-size:0.7rem;">⚠️ Dup Flag</span>`);
+        }
+
+        row.innerHTML = `
+          <td style="padding: 0.85rem 1rem; font-weight: 700; color: var(--primary-navy);">
+            <a href="javascript:void(0)" onclick="openComplaintDetailsModal('${escapeHtml(c.complaint_id)}')" style="color: var(--primary-blue); text-decoration: underline; font-weight: 700; cursor: pointer;">
+              ${escapeHtml(c.complaint_id)}
+            </a>
+          </td>
+          <td style="padding: 0.85rem 1rem; font-weight: 600;">
+            <div>${tIssue(c.issue_type)}</div>
+            ${c.place_name ? `<div style="font-size: 0.75rem; color: var(--primary-blue); font-weight: 600; margin-top: 0.15rem;">📍 ${escapeHtml(c.place_name)}</div>` : (c.address ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.1rem;">📍 ${escapeHtml(c.address)}</div>` : "")}
+            ${c.department_name ? `<div style="font-size: 0.72rem; color: var(--text-light); margin-top: 0.15rem;">🏢 ${escapeHtml(c.department_name)}</div>` : ""}
+          </td>
+
+          <td style="padding: 0.85rem 1rem;">
+            <span class="badge ${sevClass}">${sevTranslated}</span>
+          </td>
+          <td style="padding: 0.85rem 1rem;">
+            <span class="badge ${statusClass}">${statusTranslated}</span>
+          </td>
+          <td style="padding: 0.85rem 1rem; color: var(--text-muted); font-size: 0.8rem;">
+            ${dateStr}
+          </td>
+          <td style="padding: 0.85rem 1rem;">
+            <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
+              ${indicators.join(" ")}
+            </div>
+          </td>
+          <td style="padding: 0.85rem 1rem; text-align: right; white-space: nowrap;">
+            <button type="button" class="btn btn-secondary" onclick="openComplaintDetailsModal('${escapeHtml(c.complaint_id)}')" style="min-height: 30px; padding: 0.2rem 0.65rem; font-size: 0.8rem; margin-right: 0.35rem; cursor: pointer;">
+              🔍 Details
+            </button>
+            <a href="/officer/complaints/${encodeURIComponent(c.complaint_id)}" class="btn btn-primary" style="min-height: 30px; padding: 0.2rem 0.65rem; font-size: 0.8rem; text-decoration: none;">
+              Manage →
+            </a>
+          </td>
+        `;
+
+        tbody.appendChild(row);
+      });
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 1.5rem; color: var(--danger-red);">Error loading complaints: ${err.message}</td></tr>`;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // INTERACTIVE COMPLAINT DETAILS MODAL CONTROLLER
+  // ---------------------------------------------------------------------------
+  let currentModalComplaintId = null;
+
+  function escapeHtml(text) {
+    if (text === null || text === undefined) return "";
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  async function openComplaintDetailsModal(complaintId) {
+    if (!complaintId) return;
+    currentModalComplaintId = complaintId;
+
+    const modal = document.getElementById("complaint-details-modal");
+    const loading = document.getElementById("modal-loading-state");
+    const errorBox = document.getElementById("modal-error-state");
+    const details = document.getElementById("modal-details-container");
+    const fullManageBtn = document.getElementById("btn-modal-full-manage");
+
+    modal.style.display = "flex";
+    loading.style.display = "block";
+    errorBox.style.display = "none";
+    details.style.display = "none";
+
+    document.getElementById("modal-complaint-id").textContent = complaintId;
+    document.getElementById("modal-status-badge").className = "badge";
+    document.getElementById("modal-status-badge").textContent = "...";
+    document.getElementById("modal-severity-badge").className = "badge";
+    document.getElementById("modal-severity-badge").textContent = "...";
+
+    fullManageBtn.href = `/officer/complaints/${encodeURIComponent(complaintId)}`;
+
+    try {
+      // Parallel fetch: Complaint details from officer API + Blockchain records
+      const [complaint, blockchainData] = await Promise.all([
+        ApiClient.getOfficerComplaint(complaintId),
+        (async () => {
+          try {
+            if (window.ApiClient && typeof window.ApiClient.getBlockchainRecords === 'function') {
+              return await window.ApiClient.getBlockchainRecords(complaintId);
+            }
+            const res = await fetch(`/api/v1/blockchain/complaints/${encodeURIComponent(complaintId)}`);
+            if (!res.ok) {
+              const errBody = await res.json().catch(() => ({}));
+              throw new Error(errBody.detail || `Server returned ${res.status}`);
+            }
+            return await res.json();
+          } catch (e) {
+            console.warn("Blockchain fetch error:", e);
+            return { records: [], error: e.message };
+          }
+        })()
+      ]);
+
+      // Safety check: ensure another complaint wasn't selected while fetching
+      if (currentModalComplaintId !== complaintId) return;
+
+      renderComplaintModalData(complaint, blockchainData);
+
+      loading.style.display = "none";
+      details.style.display = "block";
+    } catch (err) {
+      if (currentModalComplaintId !== complaintId) return;
+      loading.style.display = "none";
+      errorBox.style.display = "block";
+      let errMsg = err.message || "Failed to retrieve complaint details.";
+      if (errMsg.includes("403") || errMsg.includes("Forbidden") || errMsg.includes("department")) {
+        errMsg = "Access Denied: You can only view complaints assigned to your jurisdiction.";
+      } else if (errMsg.includes("404") || errMsg.includes("Not Found")) {
+        errMsg = `Complaint '${complaintId}' was not found in the database.`;
+      }
+      document.getElementById("modal-error-text").textContent = errMsg;
+    }
+  }
+
+  function closeComplaintDetailsModal() {
+    const modal = document.getElementById("complaint-details-modal");
+    modal.style.display = "none";
+    currentModalComplaintId = null;
+  }
+
+  function renderComplaintModalData(c, blockchainData) {
+    // Badges
+    const statusTranslated = tStatus(c.status);
+    let statusClass = "badge-submitted";
+    const st = (c.status || "").toUpperCase();
+    if (st === "IN_PROGRESS") statusClass = "badge-in-progress";
+    else if (st === "RESOLVED") statusClass = "badge-resolved";
+    else if (st === "NEEDS_HUMAN_REVIEW") statusClass = "badge-needs-review";
+    else if (st === "AI_VERIFIED") statusClass = "badge-ai-verified";
+    
+    const statusBadge = document.getElementById("modal-status-badge");
+    statusBadge.className = `badge ${statusClass}`;
+    statusBadge.textContent = statusTranslated;
+
+    const sevTranslated = tSeverity(c.severity);
+    const sevClass = `badge-severity-${(c.severity || "medium").toLowerCase()}`;
+    const sevBadge = document.getElementById("modal-severity-badge");
+    sevBadge.className = `badge ${sevClass}`;
+    sevBadge.textContent = sevTranslated;
+
+    // Category & Department
+    document.getElementById("modal-issue-name").textContent = tIssue(c.issue_type);
+    document.getElementById("modal-department-name").textContent = c.department && c.department.name ? tDepartment(c.department.name) : "Municipal Administration";
+
+    // Complainant Citizen Details
+    const citName = c.citizen_name || "Anonymous Citizen";
+    document.getElementById("modal-citizen-name").textContent = citName;
+    const emailStr = c.citizen_email ? c.citizen_email : "No email registered";
+    const idStr = c.citizen_id ? ` • ID #${c.citizen_id}` : "";
+    document.getElementById("modal-citizen-contact").textContent = `${emailStr}${idStr}`;
+
+    // Submission Date & AI Assessment
+    const dateStr = new Date(c.created_at).toLocaleString(undefined, {
+      year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
+    });
+    document.getElementById("modal-submission-date").textContent = dateStr;
+    if (c.ai_confidence !== null && c.ai_confidence !== undefined) {
+      document.getElementById("modal-ai-status").textContent = `AI Confidence: ${(c.ai_confidence * 100).toFixed(0)}% (${c.ai_detected_issue || c.issue_type})`;
+    } else {
+      document.getElementById("modal-ai-status").textContent = "AI Model: None active (Citizen specified)";
+    }
+
+    // Coordinates & Location
+    const placeHtml = c.place_name ? `<div style="font-weight: 700; color: var(--primary-navy); margin-bottom: 0.2rem;">📍 ${escapeHtml(c.place_name)}</div>` : "";
+    const addrHtml = (c.address && c.address !== c.place_name) ? `<div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.2rem;">${escapeHtml(c.address)}</div>` : "";
+    if (c.latitude !== null && c.latitude !== undefined && c.longitude !== null && c.longitude !== undefined) {
+      document.getElementById("modal-coords").innerHTML = `
+        ${placeHtml}
+        ${addrHtml}
+        <div style="font-size: 0.8rem; color: var(--text-light);">Coordinates: ${Number(c.latitude).toFixed(6)}, ${Number(c.longitude).toFixed(6)}</div>
+      `;
+      document.getElementById("modal-maps-link").innerHTML = `<a href="https://www.google.com/maps?q=${c.latitude},${c.longitude}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-blue); font-weight: 600; text-decoration: none;">📍 View on Google Maps ↗</a>`;
+    } else if (placeHtml || addrHtml) {
+      document.getElementById("modal-coords").innerHTML = `${placeHtml}${addrHtml}`;
+      document.getElementById("modal-maps-link").innerHTML = "";
+    } else {
+      document.getElementById("modal-coords").textContent = "No GPS coordinates recorded";
+      document.getElementById("modal-maps-link").innerHTML = "";
+    }
+
+    // Description
+    document.getElementById("modal-description").textContent = c.description || "No description provided.";
+
+    // Evidence
+    const gallery = document.getElementById("modal-evidence-gallery");
+    const noEvNotice = document.getElementById("modal-no-evidence");
+    const evCount = document.getElementById("modal-evidence-count");
+    gallery.innerHTML = "";
+
+    const evidences = c.evidences || [];
+    evCount.textContent = `${evidences.length} item${evidences.length === 1 ? '' : 's'}`;
+
+    if (evidences.length > 0) {
+      noEvNotice.style.display = "none";
+      evidences.forEach(ev => {
+        const item = document.createElement("div");
+        item.style.border = "1px solid var(--border-color)";
+        item.style.borderRadius = "8px";
+        item.style.padding = "0.6rem";
+        item.style.background = "#f8fafc";
+        item.style.maxWidth = "220px";
+
+        const fType = ev.file_type || "";
+        const isImg = fType.startsWith("image/");
+        const isVid = fType.startsWith("video/");
+        const isAud = fType.startsWith("audio/");
+
+        let mediaHtml = "";
+        const mediaSrc = `/${ev.file_path.replace(/^\/+/, '')}`;
+        if (isImg) {
+          mediaHtml = `<a href="${mediaSrc}" target="_blank" rel="noopener noreferrer"><img src="${mediaSrc}" alt="Evidence" style="width: 100%; height: 130px; object-fit: cover; border-radius: 4px; display: block;"></a>`;
+        } else if (isVid) {
+          mediaHtml = `<video src="${mediaSrc}" controls style="width: 100%; height: 130px;"></video>`;
+        } else if (isAud) {
+          mediaHtml = `<audio src="${mediaSrc}" controls style="width: 100%; margin: 1rem 0;"></audio>`;
+        } else {
+          mediaHtml = `<div style="padding: 2rem 1rem; text-align: center; color: var(--text-muted);"><a href="${mediaSrc}" target="_blank">📄 View File</a></div>`;
+        }
+
+        const tagRes = ev.is_resolution ? `<span class="badge" style="background:#d1fae5; color:#065f46; font-size:0.68rem; margin-bottom: 0.35rem; display: inline-block;">Resolution Proof</span>` : "";
+
+        item.innerHTML = `
+          ${tagRes}
+          ${mediaHtml}
+          <div style="font-size: 0.72rem; color: var(--text-light); margin-top: 0.4rem; word-break: break-all;">
+            <strong>SHA-256:</strong> ${ev.sha256_hash ? escapeHtml(ev.sha256_hash.substring(0, 16)) + '...' : 'Recorded'}
+          </div>
+        `;
+        gallery.appendChild(item);
+      });
+    } else {
+      noEvNotice.style.display = "block";
+    }
+
+    // Status Timeline
+    const timeline = document.getElementById("modal-status-timeline");
+    const noHistory = document.getElementById("modal-no-history");
+    timeline.innerHTML = "";
+    const history = c.status_history || [];
+
+    if (history.length > 0) {
+      noHistory.style.display = "none";
+      history.forEach(h => {
+        const li = document.createElement("li");
+        li.style.position = "relative";
+        li.style.paddingLeft = "1.5rem";
+        li.style.paddingBottom = "1rem";
+        li.style.borderLeft = "2px solid #e2e8f0";
+
+        const stName = tStatus(h.new_status);
+        const dateStr = new Date(h.created_at).toLocaleString();
+        const remarks = h.remarks ? escapeHtml(h.remarks) : "Status updated.";
+        const changer = h.changed_by_name ? `by ${escapeHtml(h.changed_by_name)}` : (h.changed_by ? `by Officer #${h.changed_by}` : "");
+
+        li.innerHTML = `
+          <div style="position: absolute; left: -6px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: var(--primary-blue);"></div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.5rem;">
+            <strong style="color: var(--primary-navy); font-size: 0.88rem;">${stName}</strong>
+            <span style="font-size: 0.72rem; color: var(--text-light);">${dateStr}</span>
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;">
+            ${remarks} ${changer ? `<span style="font-size: 0.75rem; color: var(--text-light);">(${changer})</span>` : ""}
+          </div>
+        `;
+        timeline.appendChild(li);
+      });
+    } else {
+      noHistory.style.display = "block";
+    }
+
+    // Officer Notes
+    const notesContainer = document.getElementById("modal-notes-container");
+    const noNotes = document.getElementById("modal-no-notes");
+    notesContainer.innerHTML = "";
+    const notes = c.notes || [];
+
+    if (notes.length > 0) {
+      noNotes.style.display = "none";
+      notes.forEach(n => {
+        const nCard = document.createElement("div");
+        nCard.style.background = "#f8fafc";
+        nCard.style.border = "1px solid var(--border-color)";
+        nCard.style.borderRadius = "6px";
+        nCard.style.padding = "0.75rem";
+        nCard.style.marginBottom = "0.6rem";
+
+        const author = n.author_name || "Official Note";
+        const nDate = new Date(n.created_at).toLocaleString();
+
+        nCard.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+            <strong style="color: var(--primary-navy); font-size: 0.82rem;">${escapeHtml(author)}</strong>
+            <span style="font-size: 0.72rem; color: var(--text-light);">${nDate}</span>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-main); margin: 0; line-height: 1.4;">${escapeHtml(n.note)}</p>
+        `;
+        notesContainer.appendChild(nCard);
+      });
+    } else {
+      noNotes.style.display = "block";
+    }
+
+    // Blockchain Trail
+    renderModalBlockchainTrail(blockchainData);
+  }
+
+  function renderModalBlockchainTrail(blockchainData) {
+    const pill = document.getElementById("modal-blockchain-status-pill");
+    const milestones = document.getElementById("modal-blockchain-milestones");
+    const recordsContainer = document.getElementById("modal-blockchain-records");
+
+    milestones.innerHTML = "";
+    recordsContainer.innerHTML = "";
+
+    if (blockchainData && blockchainData.error) {
+      pill.innerHTML = `<span class="badge" style="background: #fee2e2; color: #991b1b;">QUERY FAILED</span>`;
+      recordsContainer.innerHTML = `<div style="color: #dc2626; font-size: 0.85rem; padding: 0.5rem 0;">Failed to load blockchain audit trail: ${escapeHtml(blockchainData.error)}</div>`;
+      return;
+    }
+
+    const records = (blockchainData && blockchainData.records) ? blockchainData.records : (Array.isArray(blockchainData) ? blockchainData : []);
+
+    const milestoneMap = {
+      COMPLAINT_CREATED: null,
+      COMPLAINT_STATUS_CHANGED: null,
+      RESOLUTION_EVIDENCE_ADDED: null,
+      RESOLUTION_VERIFICATION: null,
+      HUMAN_RESOLUTION_REVIEW: null,
+    };
+
+    records.forEach(r => {
+      milestoneMap[r.event_type] = r;
+    });
+
+    const milestoneLabels = [
+      { key: "COMPLAINT_CREATED", title: "Complaint Created" },
+      { key: "COMPLAINT_STATUS_CHANGED", title: "Status Changes" },
+      { key: "RESOLUTION_EVIDENCE_ADDED", title: "Resolution Evidence" },
+      { key: "RESOLUTION_VERIFICATION", title: "AI Verification" },
+      { key: "HUMAN_RESOLUTION_REVIEW", title: "Human Review" },
+    ];
+
+    milestones.innerHTML = milestoneLabels.map(m => {
+      const rec = milestoneMap[m.key];
+      let pillBg = "#f1f5f9";
+      let textCol = "#64748b";
+      let statusText = "NOT REACHED";
+      let txShort = "";
+
+      if (rec) {
+        if (rec.status === "CONFIRMED") {
+          pillBg = "#d1fae5";
+          textCol = "#065f46";
+          statusText = "CONFIRMED";
+          txShort = rec.transaction_hash ? `Tx: ${rec.transaction_hash.slice(0, 8)}...` : "";
+        } else if (rec.status === "FAILED") {
+          pillBg = "#fee2e2";
+          textCol = "#991b1b";
+          statusText = "FAILED";
+        } else {
+          pillBg = "#fef3c7";
+          textCol = "#92400e";
+          statusText = rec.status;
+        }
+      }
+
+      return `
+        <div style="background: ${pillBg}; border-radius: 6px; padding: 0.5rem 0.65rem; border: 1px solid rgba(0,0,0,0.05);">
+          <div style="font-size: 0.68rem; font-weight: 700; color: ${textCol}; text-transform: uppercase;">${escapeHtml(m.title)}</div>
+          <div style="font-weight: 800; font-size: 0.78rem; color: ${textCol}; margin-top: 0.15rem;">${escapeHtml(statusText)}</div>
+          ${txShort ? `<div style="font-family: monospace; font-size: 0.65rem; color: #0284c7; margin-top: 0.15rem;">${escapeHtml(txShort)}</div>` : ""}
+        </div>
+      `;
+    }).join("");
+
+    if (records.length === 0) {
+      pill.innerHTML = `<span class="badge" style="background: #f1f5f9; color: #64748b;">NO ANCHORS YET</span>`;
+      recordsContainer.innerHTML = `<div style="color: #64748b; font-size: 0.85rem; padding: 0.6rem 0;">No blockchain records yet.</div>`;
+      return;
+    }
+
+    const hasConfirmed = records.some(r => r.status === "CONFIRMED");
+    if (hasConfirmed) {
+      pill.innerHTML = `<span class="badge" style="background: #d1fae5; color: #065f46; font-weight: 700;">BLOCKCHAIN CONFIRMED (${records.length} Anchors)</span>`;
+    } else {
+      pill.innerHTML = `<span class="badge" style="background: #fef3c7; color: #92400e; font-weight: 700;">DATABASE-ANCHORED AUDIT TRAIL (${records.length} Records)</span>`;
+    }
+
+    recordsContainer.innerHTML = records.map(r => {
+      let badgeBg = "#f1f5f9";
+      let badgeCol = "#475569";
+      let statusLabel = r.status || "LOGGED";
+      if (r.status === "CONFIRMED") {
+        badgeBg = "#d1fae5";
+        badgeCol = "#065f46";
+        statusLabel = "CONFIRMED";
+      } else if (r.status === "NOT_CONFIGURED") {
+        badgeBg = "#fef3c7";
+        badgeCol = "#92400e";
+        statusLabel = "DB LOGGED";
+      } else if (r.status === "FAILED") {
+        badgeBg = "#fee2e2";
+        badgeCol = "#991b1b";
+        statusLabel = "FAILED";
+      }
+
+      return `
+        <div style="background: #f8fafc; border-radius: 4px; padding: 0.45rem 0.75rem; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <span style="font-weight: 700; font-family: monospace; font-size: 0.8rem; color: #1e3a8a;">${escapeHtml(r.event_type || '')}</span>
+            <span style="font-size: 0.72rem; color: #64748b; margin-left: 0.5rem;">${r.created_at ? new Date(r.created_at).toLocaleTimeString() : ''}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.6rem; font-family: monospace; font-size: 0.72rem;">
+            <span style="color: #0284c7;" title="${escapeHtml(r.transaction_hash || '')}">${r.transaction_hash ? escapeHtml(r.transaction_hash.slice(0, 10)) + '...' : 'SHA-256 Verified in DB'}</span>
+            <span class="badge" style="background: ${badgeBg}; color: ${badgeCol}; font-size: 0.68rem;">${escapeHtml(statusLabel)}</span>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // Bind Modal Close listeners
+  document.getElementById("btn-modal-close").addEventListener("click", closeComplaintDetailsModal);
+  document.getElementById("btn-modal-footer-close").addEventListener("click", closeComplaintDetailsModal);
+  document.getElementById("btn-modal-error-close").addEventListener("click", closeComplaintDetailsModal);
+  document.getElementById("complaint-details-modal").addEventListener("click", (e) => {
+    if (e.target.id === "complaint-details-modal") {
+      closeComplaintDetailsModal();
+    }
+  });
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && document.getElementById("complaint-details-modal").style.display === "flex") {
+      closeComplaintDetailsModal();
+    }
+  });
+
+  // Filter change handlers
+  document.getElementById("filter-status").addEventListener("change", () => { currentPage = 1; loadComplaintsTable(); });
+  document.getElementById("filter-severity").addEventListener("change", () => { currentPage = 1; loadComplaintsTable(); });
+  document.getElementById("filter-issue-type").addEventListener("change", () => { currentPage = 1; loadComplaintsTable(); });
+
+  let searchTimeout = null;
+  document.getElementById("filter-search").addEventListener("input", () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      currentPage = 1;
+      loadComplaintsTable();
+    }, 350);
+  });
+
+  document.getElementById("btn-reset-filters").addEventListener("click", () => {
+    document.getElementById("filter-status").value = "";
+    document.getElementById("filter-severity").value = "";
+    document.getElementById("filter-issue-type").value = "";
+    document.getElementById("filter-search").value = "";
+    currentPage = 1;
+    loadComplaintsTable();
+  });
+
+  document.getElementById("btn-refresh-dashboard").addEventListener("click", () => {
+    loadOfficerDashboardData();
+  });
+
+  document.getElementById("btn-prev-page").addEventListener("click", () => {
+    if (currentPage > 1) {
+      currentPage--;
+      loadComplaintsTable();
+    }
+  });
+
+  document.getElementById("btn-next-page").addEventListener("click", () => {
+    if (currentPage < totalPages) {
+      currentPage++;
+      loadComplaintsTable();
+    }
+  });
+
+  // Listen for language changes to update translated UI labels
+  document.addEventListener("i18n:changed", () => {
+    loadOfficerDashboardData();
+  });
+
+  document.addEventListener("DOMContentLoaded", () => {
+    loadOfficerDashboardData();
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}AI Civic Guardian — Official Municipal Grievance Redressal Portal{% endblock %}
+
+{% block content %}
+<!-- Client-Side Auth Auto-Redirect Guard -->
+<script>
+  (function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (!urlParams.get("public") && !urlParams.get("logged_out")) {
+      try {
+        const token = localStorage.getItem("auth_token");
+        const userStr = localStorage.getItem("auth_user");
+        if (token && userStr) {
+          const user = JSON.parse(userStr);
+          const role = (user.role || "").toUpperCase();
+          if (role === "ADMIN") {
+            window.location.replace("/admin/dashboard");
+          } else if (role === "OFFICER") {
+            window.location.replace("/officer/dashboard");
+          } else if (role === "CITIZEN" || !role) {
+            window.location.replace("/dashboard");
+          }
+        }
+      } catch (e) {
+        // Fallback: stay on landing page
+      }
+    }
+  })();
+</script>
+
+<!-- Hero Section -->
+<section class="hero-banner" aria-labelledby="hero-title">
+  <div class="hero-pill-badge">
+    <span class="gov-dot" aria-hidden="true"></span>
+    <span data-i18n="hero_badge">Official Municipal Redressal Platform</span>
+  </div>
+
+  <h1 id="hero-title" class="hero-heading-main" data-i18n="hero_title">
+    Report Civic Problems Quickly and Easily
+  </h1>
+
+  <p class="hero-lead-text" data-i18n="hero_sub">
+    Fast, transparent, and accountable civic grievance redressal for Coimbatore. Upload a photo, pinpoint the location, and our automated intake system verifies and dispatches your grievance directly to the responsible municipal department.
+  </p>
+
+  <div class="hero-action-buttons">
+    <a href="/complaints/new" class="btn-gov-primary" id="btn-hero-report">
+      <span aria-hidden="true">🚨</span>
+      <span data-i18n="report_problem">Lodge a Grievance</span>
+    </a>
+    <a href="/track" class="btn-gov-outline" id="btn-hero-track">
+      <span aria-hidden="true">🔍</span>
+      <span data-i18n="track_complaint">Track Grievance</span>
+    </a>
+    <a href="/login" class="btn-gov-outline auth-guest" data-i18n="login">
+      <span>Sign In</span>
+    </a>
+  </div>
+
+  <!-- Service Transparency Strip -->
+  <div class="transparency-strip">
+    <div class="trans-item">
+      <span class="trans-value">12</span>
+      <span class="trans-label">Core Municipal Departments</span>
+    </div>
+    <div class="trans-item">
+      <span class="trans-value">100%</span>
+      <span class="trans-label">Deterministic Department Dispatch</span>
+    </div>
+    <div class="trans-item">
+      <span class="trans-value">3 Languages</span>
+      <span class="trans-label">English • தமிழ் • हिन्दी</span>
+    </div>
+    <div class="trans-item">
+      <span class="trans-value">Tamper-Evident</span>
+      <span class="trans-label">SHA-256 Verified Audit Trail</span>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works Section -->
+<section class="section-wrapper" aria-labelledby="workflow-title">
+  <div class="section-head-box">
+    <div class="section-kicker" data-i18n="how_it_works">Workflow</div>
+    <h2 id="workflow-title" class="section-main-title">How Civic Redressal Works</h2>
+    <p class="section-subtitle-text">
+      From civic report to verified field resolution in four transparent, accountable steps.
+    </p>
+  </div>
+
+  <div class="steps-workflow-grid">
+    <div class="workflow-step-box">
+      <span class="step-number-tag">Step 1</span>
+      <span class="step-visual-icon" aria-hidden="true">📸</span>
+      <h3 class="step-box-title">Upload Evidence & Location</h3>
+      <p class="step-box-desc">
+        Take a photo of the pothole, waste overflow, or broken street light. Automatic GPS pinpoints the municipal coordinates.
+      </p>
+    </div>
+
+    <div class="workflow-step-box">
+      <span class="step-number-tag">Step 2</span>
+      <span class="step-visual-icon" aria-hidden="true">🤖</span>
+      <h3 class="step-box-title">AI Intake & Classification</h3>
+      <p class="step-box-desc">
+        Computer vision analyzes evidence while NLP processes your description in English or Tamil to determine canonical category and urgency.
+      </p>
+    </div>
+
+    <div class="workflow-step-box">
+      <span class="step-number-tag">Step 3</span>
+      <span class="step-visual-icon" aria-hidden="true">🏛️</span>
+      <h3 class="step-box-title">Department Officer Dispatch</h3>
+      <p class="step-box-desc">
+        Routed automatically to the authorized department officer (Roads, Sanitation, Water, Electricity) with SLA tracking.
+      </p>
+    </div>
+
+    <div class="workflow-step-box">
+      <span class="step-number-tag">Step 4</span>
+      <span class="step-visual-icon" aria-hidden="true">✅</span>
+      <h3 class="step-box-title">Resolution & Verification</h3>
+      <p class="step-box-desc">
+        Officers submit completion photos. Visual verification confirms the fix before closing, and you receive instant updates.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- Supported Civic Issue Categories -->
+<section class="section-wrapper" aria-labelledby="categories-title">
+  <div class="section-head-box">
+    <div class="section-kicker">Coverage</div>
+    <h2 id="categories-title" class="section-main-title">Supported Civic Categories</h2>
+    <p class="section-subtitle-text">
+      Every civic issue is mapped directly to its authorized municipal department.
+    </p>
+  </div>
+
+  <div class="civic-categories-grid">
+    <div class="civic-cat-card">
+      <div class="cat-icon-container">🕳️</div>
+      <div class="cat-title-text">Potholes & Road Cracks</div>
+      <span class="cat-dept-tag">Roads & Highways</span>
+      <p class="cat-desc-text">Carriageway cavities, asphalt cracking, rutting, alligator cracks, and road surface hazards.</p>
+    </div>
+
+    <div class="civic-cat-card">
+      <div class="cat-icon-container">🗑️</div>
+      <div class="cat-title-text">Garbage & Illegal Dumping</div>
+      <span class="cat-dept-tag">Solid Waste Management</span>
+      <p class="cat-desc-text">Overflowing public bins, unauthorized waste dumping on roadsides, and uncollected municipal debris.</p>
+    </div>
+
+    <div class="civic-cat-card">
+      <div class="cat-icon-container">💧</div>
+      <div class="cat-title-text">Water Leaks & Sewage Overflow</div>
+      <span class="cat-dept-tag">Water Supply & Sewerage</span>
+      <p class="cat-desc-text">Broken municipal mains, contaminated drinking water lines, open manholes, and overflowing sewers.</p>
+    </div>
+
+    <div class="civic-cat-card">
+      <div class="cat-icon-container">💡</div>
+      <div class="cat-title-text">Street Lighting Outages</div>
+      <span class="cat-dept-tag">Electricity & Street Lighting</span>
+      <p class="cat-desc-text">Non-functional street lamps, dangling overhead wires, damaged electrical poles, and dark transit corridors.</p>
+    </div>
+
+    <div class="civic-cat-card">
+      <div class="cat-icon-container">🌊</div>
+      <div class="cat-title-text">Drainage & Stormwater Flooding</div>
+      <span class="cat-dept-tag">Drainage & Flood Management</span>
+      <p class="cat-desc-text">Choked storm drains, monsoon waterlogging, stagnant runoff, and culvert blockages.</p>
+    </div>
+
+    <div class="civic-cat-card">
+      <div class="cat-icon-container">🚦</div>
+      <div class="cat-title-text">Traffic Signals & Park Amenities</div>
+      <span class="cat-dept-tag">Traffic / Parks Departments</span>
+      <p class="cat-desc-text">Defective signals, missing road signs, damaged public park equipment, and footpath encroachments.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Civic AI Assistant Banner -->
+<section class="section-wrapper" aria-labelledby="assistant-title">
+  <div class="assistant-cta-card">
+    <div class="assistant-info-side">
+      <div style="font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #a7f3d0; margin-bottom: 0.35rem;">
+        Multilingual 24/7 Redressal Guide
+      </div>
+      <h2 id="assistant-title" class="assistant-title">Need Help Filing a Grievance?</h2>
+      <p class="assistant-sub">
+        Ask our AI Civic Assistant about municipal regulations, department jurisdictions, required documents, or status terminology in English, Tamil (தமிழ்), or Hindi (हिन्दी).
+      </p>
+    </div>
+    <div>
+      <a href="/chatbot" class="btn-assistant-launch">
+        <span aria-hidden="true">💬</span>
+        <span>Open Civic Assistant</span>
+      </a>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block title %}Model {{ model_version }} — AI Civic Guardian Admin{% endblock %}
+
+{% block content %}
+<div style="max-width: 1100px; margin: 0 auto;">
+  <!-- Top Navigation & Breadcrumb -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
+    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+      <a href="/admin/models" style="color: var(--primary-blue); text-decoration: none; font-weight: 600;">← AI Models</a>
+      <span style="color: var(--text-light);">/</span>
+      <span style="font-family: monospace; font-weight: 700; color: var(--text-main);">{{ model_version }}</span>
+    </div>
+
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+      <button id="btn-activate-model" class="btn btn-primary" style="display: none; align-items: center; gap: 0.4rem;">
+        <span>★</span>
+        <span>Activate Model</span>
+      </button>
+      <a href="/api/v1/admin/models/{{ model_version }}/metrics" target="_blank" class="btn btn-secondary" style="display: flex; align-items: center; gap: 0.4rem;">
+        <span>📊</span>
+        <span>Raw Metrics JSON</span>
+      </a>
+    </div>
+  </div>
+
+  <div id="page-alert" style="display: none; margin-bottom: 1.5rem;"></div>
+
+  <!-- Loading State -->
+  <div id="detail-loading" class="card" style="text-align: center; padding: 3rem 1rem; color: var(--text-light); background: #ffffff;">
+    Loading model details, configuration, and real metrics...
+  </div>
+
+  <!-- Detail Content Wrap -->
+  <div id="detail-content" style="display: none;">
+    <!-- Top Summary Card -->
+    <div class="card" style="background: #ffffff; margin-bottom: 1.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+            <h1 id="model-title" style="font-size: 1.6rem; font-weight: 800; color: var(--primary-navy); margin: 0;">
+              Model Title
+            </h1>
+            <span id="model-status-badge"></span>
+          </div>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;">
+            Trained on dataset <a id="link-dataset" href="#" style="font-weight: 700; color: var(--primary-blue); font-family: monospace;"></a>
+          </p>
+        </div>
+      </div>
+
+      <!-- Config Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color); font-size: 0.875rem;">
+        <div>
+          <span style="color: var(--text-light); display: block; font-size: 0.75rem; text-transform: uppercase;">Base Checkpoint</span>
+          <span id="meta-base-model" style="font-family: monospace; font-weight: 600;"></span>
+        </div>
+        <div>
+          <span style="color: var(--text-light); display: block; font-size: 0.75rem; text-transform: uppercase;">Ultralytics Version</span>
+          <span id="meta-ultralytics-ver" style="font-family: monospace; font-weight: 600;"></span>
+        </div>
+        <div>
+          <span style="color: var(--text-light); display: block; font-size: 0.75rem; text-transform: uppercase;">Compute Device</span>
+          <span id="meta-device" style="font-weight: 600; text-transform: uppercase;"></span>
+        </div>
+        <div>
+          <span style="color: var(--text-light); display: block; font-size: 0.75rem; text-transform: uppercase;">Training Duration</span>
+          <span id="meta-duration" style="font-weight: 600;"></span>
+        </div>
+        <div>
+          <span style="color: var(--text-light); display: block; font-size: 0.75rem; text-transform: uppercase;">Epochs / Batch / ImgSz</span>
+          <span id="meta-hparams" style="font-weight: 600;"></span>
+        </div>
+        <div>
+          <span style="color: var(--text-light); display: block; font-size: 0.75rem; text-transform: uppercase;">Created Date</span>
+          <span id="meta-created-at" style="font-weight: 600;"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error Callout if FAILED -->
+    <div id="model-error-box" class="alert alert-danger" style="display: none; margin-bottom: 1.5rem;">
+      <strong>⚠️ Training Failure:</strong> <span id="model-error-text"></span>
+    </div>
+
+    <!-- Real Validation Metrics Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+      <div class="card" style="background: #ffffff; border-left: 4px solid #16a34a;">
+        <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #166534;">mAP50 Metric</span>
+        <div id="metric-map50" style="font-size: 2rem; font-weight: 800; color: var(--text-main); margin-top: 0.25rem;">—</div>
+        <div style="font-size: 0.8rem; color: var(--text-light);">Mean Average Precision @ IoU 0.50</div>
+      </div>
+
+      <div class="card" style="background: #ffffff; border-left: 4px solid #0284c7;">
+        <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #0369a1;">mAP50-95 Metric</span>
+        <div id="metric-map50-95" style="font-size: 2rem; font-weight: 800; color: var(--text-main); margin-top: 0.25rem;">—</div>
+        <div style="font-size: 0.8rem; color: var(--text-light);">Mean Average Precision @ IoU 0.50:0.95</div>
+      </div>
+
+      <div class="card" style="background: #ffffff; border-left: 4px solid #0d9488;">
+        <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #0f766e;">Precision</span>
+        <div id="metric-precision" style="font-size: 2rem; font-weight: 800; color: var(--text-main); margin-top: 0.25rem;">—</div>
+        <div style="font-size: 0.8rem; color: var(--text-light);">Detection Precision Rate</div>
+      </div>
+
+      <div class="card" style="background: #ffffff; border-left: 4px solid #8b5cf6;">
+        <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #6d28d9;">Recall</span>
+        <div id="metric-recall" style="font-size: 2rem; font-weight: 800; color: var(--text-main); margin-top: 0.25rem;">—</div>
+        <div style="font-size: 0.8rem; color: var(--text-light);">Detection Recall Rate</div>
+      </div>
+    </div>
+
+    <!-- Checkpoint Weights & Artifacts -->
+    <div class="card" style="background: #ffffff; margin-bottom: 1.5rem;">
+      <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; color: var(--primary-navy);">
+        Trained Model Artifacts & Weights
+      </h2>
+
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.875rem;">
+        <div style="background: var(--bg-subtle); padding: 0.75rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+          <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">🎯 Best Validated Weights (best.pt)</div>
+          <div id="weights-best-path" style="font-family: monospace; color: var(--text-muted); font-size: 0.85rem; word-break: break-all;">
+            Not generated yet
+          </div>
+        </div>
+
+        <div style="background: var(--bg-subtle); padding: 0.75rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+          <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">⏱️ Last Epoch Weights (last.pt)</div>
+          <div id="weights-last-path" style="font-family: monospace; color: var(--text-muted); font-size: 0.85rem; word-break: break-all;">
+            Not generated yet
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Model Classes List -->
+    <div class="card" style="background: #ffffff;">
+      <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--primary-navy);">
+        Model Civic Classes (<span id="count-classes">0</span>)
+      </h2>
+      <div id="classes-chips-wrap" style="display: flex; gap: 0.5rem; flex-wrap: wrap;"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const MODEL_VERSION = "{{ model_version }}";
+
+  function showAlert(msg, type = "danger") {
+    const box = document.getElementById("page-alert");
+    box.className = `alert alert-${type}`;
+    box.innerHTML = `<span>${msg}</span>`;
+    box.style.display = "block";
+  }
+
+  function getStatusBadge(status, isActive) {
+    if (isActive || status === "ACTIVE") {
+      return `<span class="badge" style="background: #16a34a; color: white;">★ ACTIVE MODEL</span>`;
+    } else if (status === "COMPLETED") {
+      return `<span class="badge" style="background: #0284c7; color: white;">COMPLETED</span>`;
+    } else if (status === "RUNNING") {
+      return `<span class="badge" style="background: #d97706; color: white;">RUNNING...</span>`;
+    } else if (status === "QUEUED") {
+      return `<span class="badge" style="background: #6366f1; color: white;">QUEUED</span>`;
+    } else if (status === "FAILED") {
+      return `<span class="badge" style="background: #dc2626; color: white;">FAILED</span>`;
+    } else {
+      return `<span class="badge" style="background: #64748b; color: white;">${status}</span>`;
+    }
+  }
+
+  async function loadModelDetail() {
+    const loadingEl = document.getElementById("detail-loading");
+    const contentEl = document.getElementById("detail-content");
+
+    try {
+      const resp = await ApiClient.getModel(MODEL_VERSION);
+      const m = resp.model;
+
+      loadingEl.style.display = "none";
+      contentEl.style.display = "block";
+
+      document.getElementById("model-title").textContent = m.model_name;
+      document.getElementById("model-status-badge").innerHTML = getStatusBadge(m.training_status, m.is_active);
+
+      const dsLink = document.getElementById("link-dataset");
+      dsLink.textContent = m.dataset_version;
+      dsLink.href = `/admin/datasets/${encodeURIComponent(m.dataset_version)}`;
+
+      document.getElementById("meta-base-model").textContent = m.base_model;
+      document.getElementById("meta-ultralytics-ver").textContent = m.ultralytics_version;
+      document.getElementById("meta-device").textContent = m.device;
+      document.getElementById("meta-duration").textContent = m.training_duration_seconds !== null ? `${m.training_duration_seconds}s` : "In Progress";
+      document.getElementById("meta-hparams").textContent = `${m.epochs} epochs • batch ${m.batch_size} • ${m.image_size}px`;
+      document.getElementById("meta-created-at").textContent = m.created_at ? new Date(m.created_at).toLocaleString() : "-";
+
+      // Metrics
+      document.getElementById("metric-map50").textContent = m.map50 !== null ? `${(m.map50 * 100).toFixed(1)}%` : "—";
+      document.getElementById("metric-map50-95").textContent = m.map50_95 !== null ? `${(m.map50_95 * 100).toFixed(1)}%` : "—";
+      document.getElementById("metric-precision").textContent = m.precision !== null ? `${(m.precision * 100).toFixed(1)}%` : "—";
+      document.getElementById("metric-recall").textContent = m.recall !== null ? `${(m.recall * 100).toFixed(1)}%` : "—";
+
+      // Error message if FAILED
+      if (m.training_status === "FAILED" && m.error_message) {
+        document.getElementById("model-error-text").textContent = m.error_message;
+        document.getElementById("model-error-box").style.display = "block";
+      }
+
+      // Weights
+      document.getElementById("weights-best-path").textContent = m.best_weights_path || "Not generated yet";
+      document.getElementById("weights-last-path").textContent = m.last_weights_path || "Not generated yet";
+
+      // Classes
+      const cWrap = document.getElementById("classes-chips-wrap");
+      cWrap.innerHTML = "";
+      const names = m.class_names || {};
+      const keys = Object.keys(names);
+      document.getElementById("count-classes").textContent = keys.length;
+
+      keys.forEach(k => {
+        const span = document.createElement("span");
+        span.className = "badge";
+        span.style.background = "#e2e8f0";
+        span.style.color = "#1e293b";
+        span.style.fontWeight = "600";
+        span.textContent = `${k}: ${names[k]}`;
+        cWrap.appendChild(span);
+      });
+
+      // Activation button logic
+      const actBtn = document.getElementById("btn-activate-model");
+      if (m.training_status === "COMPLETED" && !m.is_active && m.best_weights_path) {
+        actBtn.style.display = "inline-flex";
+      } else {
+        actBtn.style.display = "none";
+      }
+
+    } catch (err) {
+      loadingEl.style.display = "none";
+      showAlert(`Failed to load model details: ${err.message}`, "danger");
+    }
+  }
+
+  document.getElementById("btn-activate-model").addEventListener("click", async () => {
+    if (!confirm(`Activate model ${MODEL_VERSION} as the active detection model? This will archive any currently active model.`)) return;
+
+    const btn = document.getElementById("btn-activate-model");
+    btn.disabled = true;
+    btn.textContent = "Activating...";
+
+    try {
+      await ApiClient.activateModel(MODEL_VERSION);
+      showAlert(`Model ${MODEL_VERSION} is now active!`, "success");
+      loadModelDetail();
+    } catch (err) {
+      showAlert(`Activation failed: ${err.message}`, "danger");
+      btn.disabled = false;
+      btn.textContent = "Activate Model";
+    }
+  });
+
+  document.addEventListener("DOMContentLoaded", loadModelDetail);
+</script>
+{% endblock %}

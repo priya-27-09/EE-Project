@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AI Civic Guardian — Official AI-Powered Multilingual Smart Civic Grievance Redressal and Automatic Department Routing">
+  <title>{% block title %}AI Civic Guardian — Civic Grievance Redressal Platform{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Accessible Skip Link -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- Government Top Utility Banner -->
+  <div class="gov-top-bar" role="complementary" aria-label="Official Portal Notice">
+    <div class="gov-top-container">
+      <div class="gov-emblem-badge">
+        <span class="gov-dot" aria-hidden="true"></span>
+        <span>Official Municipal Grievance Redressal Portal</span>
+      </div>
+      <div class="gov-utility-links">
+        <a href="#accessibility" class="gov-util-link">Accessibility</a>
+        <span class="gov-sep" aria-hidden="true">|</span>
+        <a href="/track" class="gov-util-link">Quick Tracking</a>
+        <span class="gov-sep" aria-hidden="true">|</span>
+        <div class="lang-select-wrap">
+          <label for="lang-switcher" class="sr-only">Language:</label>
+          <select id="lang-switcher" class="lang-select-top" aria-label="Select Portal Language" data-i18n-aria-label="select_language">
+            <option value="en">English</option>
+            <option value="ta">தமிழ் (Tamil)</option>
+            <option value="hi">हिन्दी (Hindi)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Primary Navigation Header -->
+  <header class="header" role="banner">
+    <div class="nav-container">
+      <a href="/" class="brand-link" aria-label="AI Civic Guardian Home">
+        <div class="brand-logo-mark" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div class="brand-text-group">
+          <span class="brand-title" data-i18n="brand_name">AI Civic Guardian</span>
+          <span class="brand-subtitle">Civic Grievance & Intelligent Routing</span>
+        </div>
+      </a>
+
+      <div class="nav-right">
+        <!-- Dynamic Auth Navigation Links -->
+        <nav class="nav-links" id="nav-user-controls" aria-label="Main Navigation">
+          <!-- Guest Navigation -->
+          <a href="/" class="nav-btn nav-btn-ghost auth-guest" data-i18n="home">Home</a>
+          <a href="/track" class="nav-btn nav-btn-ghost auth-guest" data-i18n="track_complaint">Track Grievance</a>
+          <a href="/chatbot" class="nav-btn nav-btn-ghost" data-i18n="civic_assistant">Civic Assistant</a>
+          <a href="/login" class="nav-btn nav-btn-secondary auth-guest" data-i18n="login">Sign In</a>
+          <a href="/register" class="nav-btn nav-btn-primary auth-guest" data-i18n="register">Register</a>
+
+          <!-- Citizen Navigation Links -->
+          <a href="/" class="nav-btn nav-btn-ghost auth-citizen" style="display:none;" data-i18n="home">Home</a>
+          <a href="/dashboard" class="nav-btn nav-btn-ghost auth-citizen" style="display:none;" data-i18n="my_complaints">Dashboard</a>
+          <a href="/complaints/new" class="nav-btn nav-btn-primary auth-citizen" style="display:none;" data-i18n="report_problem">Lodge Grievance</a>
+          <a href="/track" class="nav-btn nav-btn-ghost auth-citizen" style="display:none;" data-i18n="track_complaint">Track</a>
+
+          <!-- Officer Navigation Links (Hidden from Citizens) -->
+          <a href="/officer/dashboard" class="nav-btn nav-btn-primary auth-officer" style="display:none;" data-i18n="officer_portal">Officer Portal</a>
+
+          <!-- Admin Navigation Links (Hidden from Citizens) -->
+          <a href="/admin/dashboard" class="nav-btn nav-btn-primary auth-admin" style="display:none;">Admin Overview</a>
+          <a href="/admin/datasets" class="nav-btn nav-btn-ghost auth-admin" style="display:none;">Datasets</a>
+          <a href="/admin/dataset-sources" class="nav-btn nav-btn-ghost auth-admin" style="display:none;">Sources</a>
+          <a href="/admin/models" class="nav-btn nav-btn-ghost auth-admin" style="display:none;">AI Models</a>
+          <a href="/admin/chatbot" class="nav-btn nav-btn-ghost auth-admin" style="display:none;">Knowledge Base</a>
+          <a href="/admin/dashboard" class="nav-btn nav-btn-ghost auth-admin" style="display:none;">Audit Trail</a>
+
+          <!-- User Profile & Session Controls -->
+          <div class="user-profile-wrap auth-user" style="display:none; align-items:center; gap:0.5rem;">
+            <a href="/profile" class="nav-btn nav-btn-ghost" id="nav-user-profile-link" title="My Profile" aria-label="User Profile">
+              <span>👤</span> <span id="nav-user-name">Profile</span>
+            </a>
+            <button id="btn-logout" class="nav-btn nav-btn-danger-outline" data-i18n="logout" aria-label="Log Out">Sign Out</button>
+          </div>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Global Alert Container -->
+  <div id="global-alert-box" class="main-container" style="padding-bottom: 0; display: none;" aria-live="polite"></div>
+
+  <!-- Page Content -->
+  <main class="main-container" id="main-content" role="main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Government Footer -->
+  <footer class="footer" role="contentinfo" id="accessibility">
+    <div class="footer-container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <div class="footer-brand">
+            <span class="footer-emblem" aria-hidden="true">🏛️</span>
+            <div>
+              <div class="footer-title">AI Civic Guardian</div>
+              <div class="footer-subtitle">Smart Civic Grievance Redressal</div>
+            </div>
+          </div>
+          <p class="footer-desc">
+            An automated, multilingual civic complaints intake and department dispatch platform powered by computer vision and natural language processing.
+          </p>
+          <div class="footer-badges">
+            <span class="gov-tag">Coimbatore Municipal Corporation Area</span>
+            <span class="gov-tag">12 Core Departments</span>
+          </div>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-heading">Civic Services</div>
+          <ul class="footer-links">
+            <li><a href="/complaints/new">Lodge Civic Grievance</a></li>
+            <li><a href="/track">Track Grievance Status</a></li>
+            <li><a href="/chatbot">Civic AI Assistant (Multilingual)</a></li>
+            <li><a href="/dashboard">Citizen Grievance History</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-heading">Department Portals</div>
+          <ul class="footer-links">
+            <li><a href="/officer/dashboard">Department Officer Portal</a></li>
+            <li><a href="/admin/dashboard">Supervisory Admin Portal</a></li>
+            <li><a href="/admin/models">AI Model Registry</a></li>
+            <li><a href="/admin/dashboard#audit-trail">Public Audit & Integrity Ledger</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-heading">Standards & Transparency</div>
+          <ul class="footer-links">
+            <li><span>Deterministic 12-Department Routing</span></li>
+            <li><span>Tamper-Evident SHA-256 Audit Trail</span></li>
+            <li><span>Strict Role-Based Access Control</span></li>
+            <li><span>Multilingual: English, Tamil, Hindi</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div class="footer-copy">
+          &copy; 2026 AI Civic Guardian. Developed for transparent municipal governance and public service delivery.
+        </div>
+        <div class="footer-meta">
+          <span>Official Civic Redressal Architecture</span>
+          <span class="sep">•</span>
+          <span>Open Standards & Accessible UI</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/i18n.js"></script>
+  <script>
+    // Update navbar based on auth state
+    function updateNavbarAuth() {
+      const isAuth = ApiClient.isAuthenticated();
+      const user = ApiClient.getCurrentUser();
+      const isAdmin = user && user.role === "ADMIN";
+      const isOfficer = user && (user.role === "OFFICER" || user.role === "ADMIN");
+      const isCitizen = user && (user.role === "CITIZEN" || !user.role);
+
+      const guestEls = document.querySelectorAll(".auth-guest");
+      const userEls = document.querySelectorAll(".auth-user");
+      const citizenEls = document.querySelectorAll(".auth-citizen");
+      const officerEls = document.querySelectorAll(".auth-officer");
+      const adminEls = document.querySelectorAll(".auth-admin");
+
+      guestEls.forEach(el => el.style.display = isAuth ? "none" : "inline-flex");
+      userEls.forEach(el => el.style.display = isAuth ? "inline-flex" : "none");
+      citizenEls.forEach(el => el.style.display = (isAuth && isCitizen && !isAdmin) ? "inline-flex" : "none");
+      officerEls.forEach(el => el.style.display = (isAuth && isOfficer) ? "inline-flex" : "none");
+      adminEls.forEach(el => el.style.display = (isAuth && isAdmin) ? "inline-flex" : "none");
+
+      if (isAuth && user && user.name) {
+        const nameEl = document.getElementById("nav-user-name");
+        if (nameEl) nameEl.textContent = user.name.split(" ")[0];
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      updateNavbarAuth();
+      const logoutBtn = document.getElementById("btn-logout");
+      if (logoutBtn) {
+        logoutBtn.addEventListener("click", () => ApiClient.logout());
+      }
+    });
+
+    function showGlobalAlert(message, type = "danger") {
+      const box = document.getElementById("global-alert-box");
+      if (box) {
+        box.style.display = "block";
+        box.innerHTML = `<div class="alert alert-${type}" role="alert"><span>${message}</span></div>`;
+      }
+    }
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

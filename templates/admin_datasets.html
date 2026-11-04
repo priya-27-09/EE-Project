@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+
+{% block title %}Dataset Management — AI Civic Guardian Admin{% endblock %}
+
+{% block content %}
+<div style="max-width: 1100px; margin: 0 auto;">
+  <!-- Header Bar -->
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+        <span class="badge badge-primary" style="background: #1e3a8a; color: white;">ADMIN CONSOLE</span>
+        <span style="font-size: 0.85rem; color: var(--text-light);">YOLO Model Pipeline</span>
+      </div>
+      <h1 class="hero-title" style="font-size: 1.8rem; margin-bottom: 0.25rem;">
+        Dataset Management
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">
+        Manage and validate official YOLO datasets for municipal civic issue computer vision models.
+      </p>
+    </div>
+
+    <button id="btn-open-upload-modal" class="btn btn-primary btn-lg" style="display: flex; align-items: center; gap: 0.5rem;">
+      <span>📤</span>
+      <span>Upload Dataset</span>
+    </button>
+  </div>
+
+  <!-- Global Admin Notice -->
+  <div id="admin-auth-guard" class="alert alert-warning" style="display: none; margin-bottom: 1.5rem;">
+    <strong>⚠️ Access Restricted:</strong> Dataset management requires Administrator credentials. Please log in with an ADMIN account.
+  </div>
+
+  <div id="page-alert" style="display: none; margin-bottom: 1.5rem;"></div>
+
+  <!-- Upload Modal / Section -->
+  <div id="upload-modal" class="card" style="display: none; border-left: 4px solid var(--primary-blue); margin-bottom: 2rem; background: #ffffff;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--primary-navy);">
+        📦 Upload YOLO Dataset Archive
+      </h2>
+      <button id="btn-close-upload-modal" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--text-light);">&times;</button>
+    </div>
+
+    <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+      Upload a <code>.zip</code> archive containing the standard YOLO structure: <code>images/train, val, test</code>, <code>labels/train, val, test</code>, and <code>data.yaml</code>.
+    </p>
+
+    <form id="form-upload-dataset">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="input-dataset-name">Dataset Name *</label>
+          <input type="text" id="input-dataset-name" class="form-input" placeholder="e.g. Civic Potholes & Dumps 2026 V1" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="input-dataset-file">ZIP Archive (.zip) *</label>
+          <input type="file" id="input-dataset-file" class="form-input" accept=".zip" required>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 1.25rem;">
+        <label class="form-label" for="input-dataset-desc">Description / Source Notes</label>
+        <textarea id="input-dataset-desc" class="form-input" rows="2" placeholder="e.g. Field municipal survey captures from Zone 4 with 12 canonical civic classes."></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem; align-items: center;">
+        <button type="button" id="btn-cancel-upload" class="btn btn-secondary">Cancel</button>
+        <button type="submit" id="btn-submit-upload" class="btn btn-primary" style="min-width: 150px;">
+          <span>Start Upload & Validate</span>
+        </button>
+      </div>
+
+      <div id="upload-progress-box" style="display: none; margin-top: 1rem;">
+        <div style="font-size: 0.85rem; color: var(--primary-blue); font-weight: 600; margin-bottom: 0.25rem;">
+          Uploading archive and running automated YOLO validation...
+        </div>
+        <div style="height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+          <div style="height: 100%; width: 100%; background: var(--primary-blue); animation: indeterminate 1.5s infinite linear;"></div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Datasets Table Section -->
+  <div class="card" style="background: #ffffff;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
+      <div>
+        <h2 class="card-title" style="margin-bottom: 0.25rem;">Dataset Versions</h2>
+        <p style="font-size: 0.85rem; color: var(--text-light);">
+          All uploaded datasets verified against the canonical 12 municipal civic classes.
+        </p>
+      </div>
+      <button id="btn-refresh-datasets" class="btn btn-secondary" style="min-height: 38px; padding: 0.4rem 0.9rem; font-size: 0.85rem;">
+        🔄 Refresh
+      </button>
+    </div>
+
+    <div id="datasets-loading" style="text-align: center; padding: 2.5rem 1rem; color: var(--text-light);">
+      Loading dataset versions from PostgreSQL...
+    </div>
+
+    <div id="datasets-empty" style="display: none; text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+      <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📁</div>
+      <p style="font-size: 1.1rem; font-weight: 600;">No dataset versions uploaded yet.</p>
+      <p style="font-size: 0.9rem; margin-top: 0.35rem;">Click "Upload Dataset" above to import your first YOLO dataset archive.</p>
+    </div>
+
+    <!-- Table -->
+    <div id="datasets-table-wrap" style="display: none; overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+        <thead>
+          <tr style="border-bottom: 2px solid var(--border-color); background: var(--bg-subtle);">
+            <th style="padding: 0.75rem 1rem; font-weight: 600; color: var(--text-main);">Version</th>
+            <th style="padding: 0.75rem 1rem; font-weight: 600; color: var(--text-main);">Dataset Name</th>
+            <th style="padding: 0.75rem 1rem; font-weight: 600; color: var(--text-main); text-align: center;">Images</th>
+            <th style="padding: 0.75rem 1rem; font-weight: 600; color: var(--text-main); text-align: center;">Classes</th>
+            <th style="padding: 0.75rem 1rem; font-weight: 600; color: var(--text-main); text-align: center;">Objects</th>
+            <th style="padding: 0.75rem 1rem; font-weight: 600; color: var(--text-main);">Status</th>
+            <th style="padding: 0.75rem 1rem; font-weight: 600; color: var(--text-main);">Uploaded</th>
+            <th style="padding: 0.75rem 1rem; font-weight: 600; color: var(--text-main); text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="datasets-tbody">
+          <!-- Populated by JavaScript -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function checkAdminAuth() {
+    if (!ApiClient.isAuthenticated()) {
+      window.location.href = "/login?next=/admin/datasets";
+      return false;
+    }
+    const user = ApiClient.getCurrentUser();
+    if (!user || user.role !== "ADMIN") {
+      document.getElementById("admin-auth-guard").style.display = "block";
+      document.getElementById("btn-open-upload-modal").disabled = true;
+      return false;
+    }
+    return true;
+  }
+
+  const uploadModal = document.getElementById("upload-modal");
+  const openModalBtn = document.getElementById("btn-open-upload-modal");
+  const closeModalBtn = document.getElementById("btn-close-upload-modal");
+  const cancelUploadBtn = document.getElementById("btn-cancel-upload");
+  const formUpload = document.getElementById("form-upload-dataset");
+  const pageAlert = document.getElementById("page-alert");
+
+  openModalBtn.addEventListener("click", () => {
+    uploadModal.style.display = "block";
+    uploadModal.scrollIntoView({ behavior: "smooth" });
+  });
+
+  const hideModal = () => { uploadModal.style.display = "none"; };
+  closeModalBtn.addEventListener("click", hideModal);
+  cancelUploadBtn.addEventListener("click", hideModal);
+
+  function showAlert(msg, type = "danger") {
+    pageAlert.className = `alert alert-${type}`;
+    pageAlert.innerHTML = `<span>${msg}</span>`;
+    pageAlert.style.display = "block";
+  }
+
+  function getStatusBadge(status) {
+    if (status === "READY_FOR_TRAINING") {
+      return `<span class="badge" style="background: #16a34a; color: white;">✓ READY FOR TRAINING</span>`;
+    } else if (status === "VALID") {
+      return `<span class="badge" style="background: #0284c7; color: white;">VALID</span>`;
+    } else if (status === "INVALID") {
+      return `<span class="badge" style="background: #dc2626; color: white;">✗ INVALID</span>`;
+    } else if (status === "VALIDATING") {
+      return `<span class="badge" style="background: #d97706; color: white;">VALIDATING...</span>`;
+    } else {
+      return `<span class="badge" style="background: #64748b; color: white;">${status}</span>`;
+    }
+  }
+
+  async function loadDatasets() {
+    if (!checkAdminAuth()) return;
+
+    const loadingEl = document.getElementById("datasets-loading");
+    const emptyEl = document.getElementById("datasets-empty");
+    const tableWrap = document.getElementById("datasets-table-wrap");
+    const tbody = document.getElementById("datasets-tbody");
+
+    loadingEl.style.display = "block";
+    emptyEl.style.display = "none";
+    tableWrap.style.display = "none";
+    tbody.innerHTML = "";
+
+    try {
+      const resp = await ApiClient.listDatasets(0, 50);
+      loadingEl.style.display = "none";
+
+      if (!resp.datasets || resp.datasets.length === 0) {
+        emptyEl.style.display = "block";
+        return;
+      }
+
+      tableWrap.style.display = "block";
+      resp.datasets.forEach(d => {
+        const tr = document.createElement("tr");
+        tr.style.borderBottom = "1px solid var(--border-color)";
+
+        const uploadedDate = d.uploaded_at ? new Date(d.uploaded_at).toLocaleDateString(undefined, {
+          year: "numeric", month: "short", day: "numeric"
+        }) : "-";
+
+        tr.innerHTML = `
+          <td style="padding: 0.85rem 1rem; font-weight: 700; color: var(--primary-blue); font-family: monospace;">
+            ${d.dataset_version}
+          </td>
+          <td style="padding: 0.85rem 1rem;">
+            <div style="font-weight: 600; color: var(--text-main);">${d.dataset_name}</div>
+            ${d.description ? `<div style="font-size: 0.8rem; color: var(--text-light);">${d.description}</div>` : ""}
+          </td>
+          <td style="padding: 0.85rem 1rem; text-align: center; font-weight: 600;">
+            ${d.total_image_count}
+          </td>
+          <td style="padding: 0.85rem 1rem; text-align: center;">
+            <span class="badge" style="background: #e0f2fe; color: #0369a1;">${d.class_count} / 12</span>
+          </td>
+          <td style="padding: 0.85rem 1rem; text-align: center; font-weight: 600;">
+            ${d.total_object_count}
+          </td>
+          <td style="padding: 0.85rem 1rem;">
+            ${getStatusBadge(d.status)}
+          </td>
+          <td style="padding: 0.85rem 1rem; font-size: 0.85rem; color: var(--text-muted);">
+            ${uploadedDate}
+          </td>
+          <td style="padding: 0.85rem 1rem; text-align: right;">
+            <div style="display: flex; gap: 0.4rem; justify-content: flex-end;">
+              <a href="/admin/datasets/${encodeURIComponent(d.dataset_version)}" class="btn btn-secondary" style="min-height: 32px; padding: 0.25rem 0.65rem; font-size: 0.8rem;">
+                View
+              </a>
+              <button class="btn btn-primary btn-validate-ds" data-version="${d.dataset_version}" style="min-height: 32px; padding: 0.25rem 0.65rem; font-size: 0.8rem;">
+                Validate
+              </button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Attach validate handlers
+      document.querySelectorAll(".btn-validate-ds").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+          const v = e.target.getAttribute("data-version");
+          e.target.disabled = true;
+          e.target.textContent = "Validating...";
+          try {
+            await ApiClient.validateDataset(v);
+            showAlert(`Dataset ${v} re-validated successfully.`, "success");
+            loadDatasets();
+          } catch (err) {
+            showAlert(`Validation failed: ${err.message}`, "danger");
+            e.target.disabled = false;
+            e.target.textContent = "Validate";
+          }
+        });
+      });
+
+    } catch (err) {
+      loadingEl.style.display = "none";
+      showAlert(`Failed to load datasets: ${err.message}`, "danger");
+    }
+  }
+
+  // Handle form upload
+  formUpload.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = document.getElementById("input-dataset-name").value.trim();
+    const desc = document.getElementById("input-dataset-desc").value.trim();
+    const fileInput = document.getElementById("input-dataset-file");
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+      showAlert("Please choose a YOLO .zip archive to upload.", "danger");
+      return;
+    }
+
+    const file = fileInput.files[0];
+    if (!file.name.toLowerCase().endsWith(".zip")) {
+      showAlert("Only .zip dataset archives are supported.", "danger");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("dataset_name", name);
+    if (desc) formData.append("description", desc);
+
+    const submitBtn = document.getElementById("btn-submit-upload");
+    const progressBox = document.getElementById("upload-progress-box");
+
+    submitBtn.disabled = true;
+    progressBox.style.display = "block";
+
+    try {
+      const resp = await ApiClient.uploadDataset(formData);
+      showAlert(`Dataset version ${resp.dataset.dataset_version} uploaded and validated. Status: ${resp.dataset.status}`, resp.dataset.status === "READY_FOR_TRAINING" ? "success" : "warning");
+      formUpload.reset();
+      hideModal();
+      loadDatasets();
+    } catch (err) {
+      showAlert(`Dataset upload error: ${err.message}`, "danger");
+    } finally {
+      submitBtn.disabled = false;
+      progressBox.style.display = "none";
+    }
+  });
+
+  document.getElementById("btn-refresh-datasets").addEventListener("click", loadDatasets);
+  document.addEventListener("DOMContentLoaded", loadDatasets);
+</script>
+{% endblock %}

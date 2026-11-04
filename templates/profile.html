@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile — AI Civic Guardian{% endblock %}
+
+{% block content %}
+<div class="profile-wrapper" style="max-width: 680px; margin: 0 auto;">
+  <div style="margin-bottom: 2rem;">
+    <a href="/dashboard" class="btn btn-secondary" style="min-height: 40px; padding: 0.4rem 0.9rem; font-size: 0.85rem;" data-i18n="back_to_dashboard">
+      ← Back to Dashboard
+    </a>
+  </div>
+
+  <div class="card" aria-labelledby="profile-heading">
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+      <span style="font-size: 1.8rem;" aria-hidden="true">👤</span>
+      <h1 id="profile-heading" class="card-title" style="margin: 0; font-size: 1.6rem;" data-i18n="profile_title">
+        Citizen Profile
+      </h1>
+    </div>
+    <p class="card-subtitle" style="margin-bottom: 1.75rem;" data-i18n="profile_sub">
+      Manage your personal details and preferred communication language for official civic notifications.
+    </p>
+
+    <!-- Alert Box -->
+    <div id="profile-alert" style="display: none; margin-bottom: 1.5rem;" role="alert" aria-live="polite"></div>
+
+    <form id="form-profile" novalidate>
+      <!-- Full Name -->
+      <div class="form-group">
+        <label for="profile-name" class="form-label" data-i18n="full_name">Full Name</label>
+        <input 
+          type="text" 
+          id="profile-name" 
+          class="form-input" 
+          required 
+          minlength="2" 
+          maxlength="150" 
+          autocomplete="name"
+        />
+      </div>
+
+      <!-- Email Address (Read-only for security) -->
+      <div class="form-group">
+        <label for="profile-email" class="form-label" data-i18n="email_address">Email Address</label>
+        <input 
+          type="email" 
+          id="profile-email" 
+          class="form-input" 
+          readonly 
+          disabled 
+          style="background: #f1f5f9; cursor: not-allowed; color: #64748b;"
+        />
+        <div class="form-help" data-i18n="email_immutable_hint">
+          Email address is locked to your authenticated municipal identity.
+        </div>
+      </div>
+
+      <!-- Role Badge -->
+      <div class="form-group">
+        <label class="form-label" data-i18n="portal_role">Account Role</label>
+        <div>
+          <span id="profile-role-badge" class="badge badge-submitted" style="font-size: 0.85rem; padding: 0.35rem 0.75rem;">
+            CITIZEN
+          </span>
+        </div>
+      </div>
+
+      <!-- Preferred Language -->
+      <div class="form-group">
+        <label for="profile-language" class="form-label" data-i18n="preferred_language">Preferred Language</label>
+        <select id="profile-language" class="form-select">
+          <option value="en">English</option>
+          <option value="ta">தமிழ் (Tamil)</option>
+          <option value="hi">हिन्दी (Hindi)</option>
+        </select>
+        <div class="form-help" data-i18n="language_pref_hint">
+          Civic Assistant responses and grievance status updates will automatically adapt to your preferred language.
+        </div>
+      </div>
+
+      <!-- Member Since -->
+      <div class="form-group">
+        <label class="form-label" data-i18n="member_since">Member Since</label>
+        <div id="profile-created-at" style="font-weight: 600; color: var(--text-muted); font-size: 0.95rem;">
+          —
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; margin-top: 2rem;">
+        <button type="submit" id="btn-save-profile" class="btn btn-primary" style="min-height: 46px; padding: 0.5rem 1.75rem; font-size: 0.95rem;">
+          <span data-i18n="save_changes">Save Profile Changes</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  if (!ApiClient.isAuthenticated()) {
+    window.location.href = "/login?next=/profile";
+  }
+
+  const form = document.getElementById("form-profile");
+  const nameInput = document.getElementById("profile-name");
+  const emailInput = document.getElementById("profile-email");
+  const roleBadge = document.getElementById("profile-role-badge");
+  const langSelect = document.getElementById("profile-language");
+  const createdAtEl = document.getElementById("profile-created-at");
+  const alertBox = document.getElementById("profile-alert");
+  const submitBtn = document.getElementById("btn-save-profile");
+
+  async function loadProfile() {
+    try {
+      const user = await ApiClient.getMe();
+      nameInput.value = user.name || "";
+      emailInput.value = user.email || "";
+      roleBadge.textContent = user.role || "CITIZEN";
+      langSelect.value = user.preferred_language || "en";
+      if (user.created_at) {
+        createdAtEl.textContent = new Date(user.created_at).toLocaleDateString(undefined, {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+      }
+    } catch (err) {
+      alertBox.className = "alert alert-danger";
+      alertBox.textContent = err.message;
+      alertBox.style.display = "block";
+    }
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    alertBox.style.display = "none";
+
+    const newName = nameInput.value.trim();
+    const newLang = langSelect.value;
+
+    if (!newName || newName.length < 2) {
+      alertBox.className = "alert alert-danger";
+      alertBox.textContent = "Please provide a valid name (at least 2 characters).";
+      alertBox.style.display = "block";
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Saving...";
+
+    try {
+      const updatedUser = await ApiClient.request("/auth/me", {
+        method: "PATCH",
+        body: JSON.stringify({
+          name: newName,
+          preferred_language: newLang,
+        }),
+      });
+
+      // Update cached user in localStorage
+      const token = ApiClient.getToken();
+      ApiClient.setToken(token, updatedUser);
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Save Profile Changes";
+
+      alertBox.className = "alert alert-success";
+      alertBox.textContent = "Your profile changes have been saved successfully!";
+      alertBox.style.display = "block";
+
+      // If language changed, apply it in i18n
+      if (window.I18n && typeof window.I18n.setLanguage === "function") {
+        window.I18n.setLanguage(newLang);
+      }
+    } catch (err) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Save Profile Changes";
+      alertBox.className = "alert alert-danger";
+      alertBox.textContent = err.message;
+      alertBox.style.display = "block";
+    }
+  });
+
+  document.addEventListener("DOMContentLoaded", loadProfile);
+</script>
+{% endblock %}

@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+
+{% block title %}Citizen Dashboard — AI Civic Guardian{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+  <!-- Welcome & Primary Action Section -->
+  <section class="welcome-section" aria-labelledby="welcome-heading">
+    <div class="welcome-content">
+      <div style="font-size: 0.85rem; font-weight: 700; color: var(--accent-teal); text-transform: uppercase; margin-bottom: 0.25rem;">My Dashboard</div>
+      <h1 id="welcome-heading" class="hero-title" style="font-size: 2rem; margin-bottom: 0.5rem; text-align: left;">
+        <span data-i18n="welcome_prefix">Welcome</span>, <span id="user-display-name">Citizen</span>
+      </h1>
+      <p class="hero-subtitle" style="text-align: left; margin: 0 0 1.25rem 0; font-size: 1.05rem;" data-i18n="citizen_welcome_desc">
+        Report civic problems easily. Our system helps identify the issue, determine severity, and route your complaint to the appropriate department.
+      </p>
+      <a href="/complaints/new" class="btn btn-primary btn-lg" id="btn-primary-report" aria-label="Report a new civic problem">
+        <span style="font-size: 1.3rem;" aria-hidden="true">🚨</span>
+        <span data-i18n="report_problem">Report a Problem</span>
+        <span class="sr-only">REPORT A PROBLEM</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- Quick Action Cards Section -->
+  <section class="quick-actions-section" aria-labelledby="quick-actions-heading" style="margin-bottom: 2.5rem;">
+    <h2 id="quick-actions-heading" class="sr-only">Quick Actions</h2>
+    <div class="quick-actions-grid">
+      <!-- 1. Report a Problem -->
+      <a href="/complaints/new" class="quick-action-card" id="card-action-report">
+        <div class="quick-action-icon" aria-hidden="true">📷</div>
+        <h3 class="quick-action-title" data-i18n="action_report_title">Report a Problem</h3>
+        <p class="quick-action-desc" data-i18n="action_report_desc">Upload a photo, video, voice, or text to lodge a new complaint.</p>
+        <span class="quick-action-link" data-i18n="get_started">Start Report →</span>
+      </a>
+
+      <!-- 2. My Complaints -->
+      <a href="#my-complaints-section" class="quick-action-card" id="card-action-my-complaints">
+        <div class="quick-action-icon" aria-hidden="true">📋</div>
+        <h3 class="quick-action-title" data-i18n="action_complaints_title">My Complaints</h3>
+        <p class="quick-action-desc" data-i18n="action_complaints_desc">View all grievances submitted by your account.</p>
+        <span class="quick-action-link" data-i18n="view_all">View Grievances ↓</span>
+      </a>
+
+      <!-- 3. Track Complaint -->
+      <a href="/track" class="quick-action-card" id="card-action-track">
+        <div class="quick-action-icon" aria-hidden="true">🔍</div>
+        <h3 class="quick-action-title" data-i18n="action_track_title">Track Complaint</h3>
+        <p class="quick-action-desc" data-i18n="action_track_desc">Track complaint resolution status, timeline, and assigned department.</p>
+        <span class="quick-action-link" data-i18n="track_now">Track Status →</span>
+      </a>
+
+      <!-- 4. Civic Assistant -->
+      <a href="/chatbot" class="quick-action-card" id="card-action-assistant">
+        <div class="quick-action-icon" aria-hidden="true">💬</div>
+        <h3 class="quick-action-title" data-i18n="action_assistant_title">Civic Assistant</h3>
+        <p class="quick-action-desc" data-i18n="action_assistant_desc">Ask civic and government procedure questions to our grounded AI assistant.</p>
+        <span class="quick-action-link" data-i18n="ask_assistant">Ask Assistant →</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- Complaint Summary Stats Cards -->
+  <section class="summary-section" aria-labelledby="summary-heading" style="margin-bottom: 2.5rem;">
+    <h2 id="summary-heading" style="font-size: 1.25rem; font-weight: 700; color: var(--primary-navy); margin-bottom: 1rem;" data-i18n="complaint_summary_heading">
+      Grievance Summary
+    </h2>
+    <div class="summary-stats-grid">
+      <div class="stat-card" id="stat-total">
+        <div class="stat-label" data-i18n="stat_total_complaints">Total Complaints</div>
+        <div class="stat-number" id="count-total">0</div>
+        <div class="stat-subtext" data-i18n="stat_total_sub">All logged grievances</div>
+      </div>
+      <div class="stat-card" id="stat-submitted">
+        <div class="stat-label" data-i18n="stat_submitted">Submitted</div>
+        <div class="stat-number stat-color-submitted" id="count-submitted">0</div>
+        <div class="stat-subtext" data-i18n="stat_submitted_sub">Awaiting verification/dispatch</div>
+      </div>
+      <div class="stat-card" id="stat-in-progress">
+        <div class="stat-label" data-i18n="stat_in_progress">In Progress</div>
+        <div class="stat-number stat-color-inprogress" id="count-inprogress">0</div>
+        <div class="stat-subtext" data-i18n="stat_inprogress_sub">Under active field repair</div>
+      </div>
+      <div class="stat-card" id="stat-resolved">
+        <div class="stat-label" data-i18n="stat_resolved">Resolved</div>
+        <div class="stat-number stat-color-resolved" id="count-resolved">0</div>
+        <div class="stat-subtext" data-i18n="stat_resolved_sub">Verified and closed</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Recent Complaints List Section -->
+  <section id="my-complaints-section" class="card" aria-labelledby="complaints-list-heading">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+      <div>
+        <h2 id="complaints-list-heading" class="card-title" style="margin-bottom: 0.2rem;" data-i18n="recent_complaints_heading">
+          My Grievances
+        </h2>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0;" data-i18n="recent_complaints_sub">
+          Official real-time status of grievances submitted by your account.
+        </p>
+      </div>
+
+      <button id="btn-refresh-complaints" class="btn btn-secondary" style="min-height: 40px; padding: 0.45rem 1rem; font-size: 0.85rem;" aria-label="Refresh complaints list">
+        <span aria-hidden="true">🔄</span> <span data-i18n="refresh">Refresh</span>
+      </button>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem; background: #f8fafc; padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+      <div style="flex: 2; min-width: 220px;">
+        <input 
+          type="text" 
+          id="search-my-complaints" 
+          class="form-input" 
+          placeholder="Search by Complaint ID, category, or keyword..." 
+          style="min-height: 40px; font-size: 0.9rem;"
+        />
+      </div>
+      <div style="flex: 1; min-width: 160px;">
+        <select id="filter-my-status" class="form-select" style="min-height: 40px; font-size: 0.9rem;">
+          <option value="ALL">All Statuses</option>
+          <option value="SUBMITTED">Submitted</option>
+          <option value="AI_VERIFIED">AI Verified</option>
+          <option value="DEPARTMENT_ASSIGNED">Assigned</option>
+          <option value="IN_PROGRESS">In Progress</option>
+          <option value="RESOLVED">Resolved</option>
+          <option value="NEEDS_HUMAN_REVIEW">Needs Review</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Live Status / Loading Container -->
+    <div id="dashboard-loading" style="text-align: center; padding: 3rem 1rem; color: var(--text-light);" aria-live="polite">
+      <div class="ai-spinner" style="width: 32px; height: 32px; border-width: 3px; margin-bottom: 0.75rem;" aria-hidden="true"></div>
+      <div style="font-weight: 600;" data-i18n="loading_complaints">Loading your complaints...</div>
+    </div>
+
+    <div id="dashboard-alert" style="display: none;" role="alert" aria-live="assertive"></div>
+
+    <!-- Empty Complaints State -->
+    <div id="complaints-empty" style="display: none; text-align: center; padding: 3rem 1rem;" role="region" aria-label="No Complaints">
+      <div style="font-size: 3rem; margin-bottom: 0.5rem;" aria-hidden="true">📋</div>
+      <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--primary-navy);" data-i18n="no_complaints_title">No complaints submitted yet.</h3>
+      <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 480px; margin: 0.35rem auto 1.5rem auto;" data-i18n="no_complaints_sub">
+        You have not lodged any civic grievances yet. If you spot a pothole, overflowing garbage, or street light issue, report it easily.
+      </p>
+      <a href="/complaints/new" class="btn btn-primary btn-lg" id="btn-report-first" data-i18n="report_first_problem">
+        Report Your First Problem
+      </a>
+    </div>
+
+    <!-- Dynamic Complaints Container -->
+    <div id="complaints-list" style="display: none;" role="feed" aria-label="Complaints List"></div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Enforce authentication
+  if (!ApiClient.isAuthenticated()) {
+    window.location.href = "/login?next=/dashboard";
+  }
+
+  const currentUser = ApiClient.getCurrentUser();
+  if (currentUser && currentUser.name) {
+    document.getElementById("user-display-name").textContent = currentUser.name;
+  }
+
+  let allComplaintsData = [];
+
+  function getStatusBadge(status) {
+    const s = (status || "").toUpperCase();
+    if (s === "RESOLVED") {
+      return { label: `✓ ${tStatus("RESOLVED")}`, className: "badge-status-resolved" };
+    } else if (s === "NEEDS_HUMAN_REVIEW") {
+      return { label: `! ${tStatus("NEEDS_HUMAN_REVIEW")}`, className: "badge-status-review" };
+    } else if (s === "IN_PROGRESS") {
+      return { label: `● ${tStatus("IN_PROGRESS")}`, className: "badge-status-inprogress" };
+    } else if (s === "DEPARTMENT_ASSIGNED") {
+      return { label: `🏢 ${tStatus("DEPARTMENT_ASSIGNED")}`, className: "badge-status-assigned" };
+    } else if (s === "AI_VERIFIED") {
+      return { label: `🤖 ${tStatus("AI_VERIFIED")}`, className: "badge-status-verified" };
+    } else {
+      return { label: `⏳ ${tStatus("SUBMITTED")}`, className: "badge-status-submitted" };
+    }
+  }
+
+  function renderFilteredComplaints() {
+    const listEl = document.getElementById("complaints-list");
+    const emptyEl = document.getElementById("complaints-empty");
+    const searchTerm = (document.getElementById("search-my-complaints")?.value || "").toLowerCase().trim();
+    const statusFilter = (document.getElementById("filter-my-status")?.value || "ALL").toUpperCase();
+
+    listEl.innerHTML = "";
+
+    const filtered = allComplaintsData.filter(c => {
+      const matchSearch = !searchTerm || 
+        c.complaint_id.toLowerCase().includes(searchTerm) ||
+        (c.issue_type || "").toLowerCase().includes(searchTerm) ||
+        (c.description || "").toLowerCase().includes(searchTerm) ||
+        (c.department && c.department.name.toLowerCase().includes(searchTerm));
+
+      const s = (c.status || "").toUpperCase();
+      const matchStatus = statusFilter === "ALL" || s === statusFilter;
+
+      return matchSearch && matchStatus;
+    });
+
+    if (filtered.length === 0) {
+      if (allComplaintsData.length === 0) {
+        emptyEl.style.display = "block";
+        listEl.style.display = "none";
+      } else {
+        emptyEl.style.display = "none";
+        listEl.style.display = "block";
+        listEl.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--text-muted);">No grievances match your search criteria.</div>`;
+      }
+      return;
+    }
+
+    emptyEl.style.display = "none";
+    listEl.style.display = "block";
+
+    filtered.forEach((c) => {
+      const card = document.createElement("article");
+      card.className = "complaint-card";
+      card.setAttribute("aria-label", `Complaint ${c.complaint_id}`);
+
+      const deptTranslated = c.department ? tDepartment(c.department.name) : t("routing_in_progress");
+      const issueTranslated = tIssue(c.issue_type);
+      const severityTranslated = tSeverity(c.severity || "MEDIUM");
+      const statusBadge = getStatusBadge(c.status);
+
+      const dateStr = new Date(c.created_at).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+
+      const severityBadgeClass = `badge-severity-${(c.severity || "medium").toLowerCase()}`;
+
+      // Location text
+      let locationText = "";
+      if (c.place_name) {
+        locationText = `<span>📍 ${escapeHtml(c.place_name)}</span><span>•</span>`;
+      } else if (c.address) {
+        locationText = `<span>📍 ${escapeHtml(c.address)}</span><span>•</span>`;
+      } else if (c.latitude !== null && c.longitude !== null && c.latitude !== undefined && c.longitude !== undefined) {
+        locationText = `<span>📍 ${Number(c.latitude).toFixed(4)}, ${Number(c.longitude).toFixed(4)}</span><span>•</span>`;
+      }
+
+      // Evidence thumbnail
+      let thumbHtml = "";
+      if (c.evidences && c.evidences.length > 0) {
+        const ev = c.evidences[0];
+        const fp = ev.file_path || "";
+        const normPath = fp.startsWith("/") ? fp : `/${fp}`;
+        thumbHtml = `
+          <div style="width: 70px; height: 70px; border-radius: 6px; overflow: hidden; flex-shrink: 0; background: #e2e8f0; border: 1px solid var(--border-color);">
+            <img src="${normPath}" alt="Evidence" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.style.display='none'">
+          </div>
+        `;
+      }
+
+      // Clean description
+      const displayDesc = c.description || c.original_text || "";
+      const truncatedDesc = displayDesc.length > 130 ? displayDesc.substring(0, 130) + "..." : displayDesc;
+
+      card.innerHTML = `
+        <div style="display: flex; gap: 1rem; width: 100%; align-items: flex-start;">
+          ${thumbHtml}
+          <div class="complaint-card-main" style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.35rem;">
+              <h3 style="margin: 0; font-size: 1.15rem; color: var(--primary-navy);">${issueTranslated}</h3>
+              <span class="badge ${severityBadgeClass}">${severityTranslated}</span>
+            </div>
+            <div class="complaint-meta">
+              <span style="font-weight: 700; color: var(--primary-blue); font-family: monospace; font-size: 0.9rem;">${c.complaint_id}</span>
+              <span>•</span>
+              <span>🏢 ${deptTranslated}</span>
+              <span>•</span>
+              ${locationText}
+              <span>📅 ${dateStr}</span>
+            </div>
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.5rem; line-height: 1.5;">
+              ${escapeHtml(truncatedDesc)}
+            </p>
+          </div>
+
+          <div class="complaint-card-actions" style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.75rem; flex-shrink: 0;">
+            <span class="badge ${statusBadge.className}">${statusBadge.label}</span>
+            <a href="/complaints/${encodeURIComponent(c.complaint_id)}" class="btn btn-secondary btn-sm" style="min-height: 40px; padding: 0.4rem 0.9rem; font-size: 0.85rem;" data-i18n="view_details">
+              View Details →
+            </a>
+          </div>
+        </div>
+      `;
+      listEl.appendChild(card);
+    });
+  }
+
+  async function loadMyComplaints() {
+    const loadingEl = document.getElementById("dashboard-loading");
+    const emptyEl = document.getElementById("complaints-empty");
+    const listEl = document.getElementById("complaints-list");
+    const alertBox = document.getElementById("dashboard-alert");
+
+    loadingEl.style.display = "block";
+    emptyEl.style.display = "none";
+    listEl.style.display = "none";
+    alertBox.style.display = "none";
+
+    try {
+      const data = await ApiClient.listComplaints();
+      loadingEl.style.display = "none";
+
+      const items = data.items || [];
+      allComplaintsData = items;
+
+      // Calculate REAL factual statistics
+      let countSubmitted = 0;
+      let countInProgress = 0;
+      let countResolved = 0;
+
+      items.forEach((c) => {
+        const s = (c.status || "").toUpperCase();
+        if (s === "RESOLVED") {
+          countResolved++;
+        } else if (s === "IN_PROGRESS" || s === "DEPARTMENT_ASSIGNED" || s === "AI_VERIFIED") {
+          countInProgress++;
+        } else {
+          countSubmitted++;
+        }
+      });
+
+      document.getElementById("count-total").textContent = items.length;
+      document.getElementById("count-submitted").textContent = countSubmitted;
+      document.getElementById("count-inprogress").textContent = countInProgress;
+      document.getElementById("count-resolved").textContent = countResolved;
+
+      renderFilteredComplaints();
+
+    } catch (err) {
+      loadingEl.style.display = "none";
+      alertBox.className = "alert alert-danger";
+      alertBox.textContent = err.message;
+      alertBox.style.display = "block";
+    }
+  }
+
+  document.getElementById("btn-refresh-complaints").addEventListener("click", loadMyComplaints);
+  document.getElementById("search-my-complaints")?.addEventListener("input", renderFilteredComplaints);
+  document.getElementById("filter-my-status")?.addEventListener("change", renderFilteredComplaints);
+  document.addEventListener("DOMContentLoaded", loadMyComplaints);
+  document.addEventListener("i18n:changed", () => loadMyComplaints());
+</script>
+{% endblock %}
+

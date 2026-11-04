@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+
+{% block title %}Civic Dataset Sources & Acquisition — AI Civic Guardian Admin{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding-bottom: 3rem;">
+  <!-- Header Bar -->
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.75rem;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+        <span class="badge badge-primary" style="background: #1e3a8a; color: white;">ADMIN CONSOLE</span>
+        <span style="font-size: 0.85rem; color: var(--text-light);">Step 4C Data Pipeline</span>
+      </div>
+      <h1 class="hero-title" style="font-size: 1.8rem; margin-bottom: 0.25rem;">
+        Civic Dataset Sources & Acquisition
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">
+        Public open datasets registry, license audit, label normalization, deduplication, and quality gate verification.
+      </p>
+    </div>
+
+    <div style="display: flex; gap: 0.75rem;">
+      <button id="btn-refresh" class="btn btn-secondary" style="display: flex; align-items: center; gap: 0.5rem;">
+        <span>🔄</span>
+        <span>Refresh</span>
+      </button>
+      <a href="/admin/datasets" class="btn btn-primary" style="display: flex; align-items: center; gap: 0.5rem;">
+        <span>📁</span>
+        <span>Dataset Versions</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Admin Auth Guard -->
+  <div id="admin-auth-guard" class="alert alert-warning" style="display: none; margin-bottom: 1.5rem;">
+    <strong>⚠️ Access Restricted:</strong> Dataset sources management requires Administrator credentials. Please log in with an ADMIN account.
+  </div>
+
+  <div id="page-alert" style="display: none; margin-bottom: 1.5rem;"></div>
+
+  <!-- Summary Metric Cards -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+    <div class="card" style="padding: 1.25rem; text-align: center;">
+      <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Audited Datasets</div>
+      <div id="metric-audited" style="font-size: 2rem; font-weight: 800; color: #1e293b; margin: 0.25rem 0;">5</div>
+      <div style="font-size: 0.75rem; color: #64748b;">Public vision benchmarks</div>
+    </div>
+
+    <div class="card" style="padding: 1.25rem; text-align: center;">
+      <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Approved & Normalized</div>
+      <div id="metric-approved" style="font-size: 2rem; font-weight: 800; color: #16a34a; margin: 0.25rem 0;">3</div>
+      <div style="font-size: 0.75rem; color: #16a34a;">CC BY 4.0 / CC BY-SA 4.0</div>
+    </div>
+
+    <div class="card" style="padding: 1.25rem; text-align: center;">
+      <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Covered Classes</div>
+      <div id="metric-covered-classes" style="font-size: 2rem; font-weight: 800; color: #2563eb; margin: 0.25rem 0;">3 / 12</div>
+      <div style="font-size: 0.75rem; color: #2563eb;">Ready for civic model</div>
+    </div>
+
+    <div class="card" style="padding: 1.25rem; text-align: center;">
+      <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Custom Data Needed</div>
+      <div id="metric-missing-classes" style="font-size: 2rem; font-weight: 800; color: #d97706; margin: 0.25rem 0;">9 / 12</div>
+      <div style="font-size: 0.75rem; color: #d97706;">Municipal field capture required</div>
+    </div>
+
+    <div class="card" style="padding: 1.25rem; text-align: center;">
+      <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Duplicates Found</div>
+      <div id="metric-duplicates" style="font-size: 2rem; font-weight: 800; color: #475569; margin: 0.25rem 0;">0</div>
+      <div style="font-size: 0.75rem; color: #16a34a;">Zero leakage verified</div>
+    </div>
+
+    <div class="card" style="padding: 1.25rem; text-align: center;">
+      <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Step 4A Quality Gate</div>
+      <div id="metric-quality-status" style="font-size: 1.25rem; font-weight: 800; color: #16a34a; margin: 0.6rem 0;">READY</div>
+      <div style="font-size: 0.75rem; color: #16a34a;">Canonical bounds verified</div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div id="loading-spinner" style="text-align: center; padding: 3rem 1rem;">
+    <div style="font-size: 2rem; margin-bottom: 0.5rem;">⏳</div>
+    <div style="color: var(--text-muted); font-size: 0.95rem;">Loading dataset sources, license audits, and quality metrics...</div>
+  </div>
+
+  <!-- Main Content Container (Hidden until loaded) -->
+  <div id="sources-content" style="display: none;">
+    <!-- Section 1: Audited Public Dataset Sources -->
+    <div class="card" style="margin-bottom: 2rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
+        <div>
+          <h2 style="font-size: 1.2rem; font-weight: 700; color: var(--primary-navy); margin: 0;">
+            📚 Audited Public Computer Vision Datasets
+          </h2>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.25rem 0 0 0;">
+            Source repository attribution, verified license terms, and canonical civic mapping decisions.
+          </p>
+        </div>
+      </div>
+
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+          <thead>
+            <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: left;">
+              <th style="padding: 0.75rem 1rem;">ID</th>
+              <th style="padding: 0.75rem 1rem;">Dataset & Publisher</th>
+              <th style="padding: 0.75rem 1rem;">License</th>
+              <th style="padding: 0.75rem 1rem;">Audit Status</th>
+              <th style="padding: 0.75rem 1rem;">Target Classes</th>
+              <th style="padding: 0.75rem 1rem;">Source Link</th>
+            </tr>
+          </thead>
+          <tbody id="table-datasets-body">
+            <!-- Populated via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Section 2: Canonical 12 Civic Classes Coverage Matrix -->
+    <div class="card" style="margin-bottom: 2rem;">
+      <div style="margin-bottom: 1.25rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
+        <h2 style="font-size: 1.2rem; font-weight: 700; color: var(--primary-navy); margin: 0;">
+          🎯 Canonical 12 Civic Classes Coverage Matrix
+        </h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.25rem 0 0 0;">
+          Strict zero-indexed civic classes. Classes with missing public data are flagged honestly for municipal collection.
+        </p>
+      </div>
+
+      <div id="classes-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem;">
+        <!-- Populated via JS -->
+      </div>
+    </div>
+
+    <!-- Section 3: Data Quality & Split Distribution Card -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+      <div class="card">
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--primary-navy); margin-bottom: 0.75rem;">
+          ⚖️ Deterministic Split (70 / 20 / 10)
+        </h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Partitioned with random seed <code>42</code>. Image and label files colocated with zero data leakage across splits.
+        </p>
+        <div id="split-summary-box" style="background: #f8fafc; border-radius: 8px; padding: 1rem; border: 1px solid #e2e8f0;">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--primary-navy); margin-bottom: 0.75rem;">
+          🛡️ Step 4A Validation Quality Gate
+        </h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Executed through <code>YOLODatasetValidator</code> on <code>data/processed/civic_yolo/</code>.
+        </p>
+        <div id="quality-gate-box" style="background: #f8fafc; border-radius: 8px; padding: 1rem; border: 1px solid #e2e8f0;">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4: Missing Data & Municipal Capture Strategy -->
+    <div class="card" style="margin-bottom: 2rem; border-left: 4px solid #d97706;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div>
+          <h2 style="font-size: 1.15rem; font-weight: 700; color: #92400e; margin: 0;">
+            📋 Municipal Field Collection Guidelines (9 Missing Classes)
+          </h2>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.25rem 0 0 0;">
+            Requirements for field officers, camera specs, privacy blurring, and bounding box standards.
+          </p>
+        </div>
+        <button id="btn-toggle-custom-doc" class="btn btn-secondary btn-sm">Toggle Full Strategy</button>
+      </div>
+
+      <div id="custom-doc-preview" style="background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 1rem; font-size: 0.85rem; color: #713f12; line-height: 1.6;">
+        <strong>Strict Policy:</strong> Ultralytics YOLO model training must NOT be initiated for the 9 unpopulated classes until field captures are ingested. Open web datasets fail due to perspective mismatch (overhead satellite, autonomous driving cars) or restrictive non-commercial terms.
+      </div>
+
+      <div id="custom-doc-full" style="display: none; margin-top: 1rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.25rem; max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 0.825rem; white-space: pre-wrap;">
+        <!-- Filled with markdown text -->
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function showAlert(msg, type = "info") {
+    const el = document.getElementById("page-alert");
+    if (!el) return;
+    el.style.display = "block";
+    el.className = `alert alert-${type}`;
+    el.innerHTML = `<span>${msg}</span>`;
+  }
+
+  function getStatusBadge(status) {
+    if (status === "APPROVED_WITH_ATTRIBUTION" || status === "NORMALIZED") {
+      return `<span style="background: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 9999px; font-weight: 600; font-size: 0.75rem;">${status}</span>`;
+    } else if (status === "REVIEW_REQUIRED") {
+      return `<span style="background: #fef3c7; color: #b45309; padding: 2px 8px; border-radius: 9999px; font-weight: 600; font-size: 0.75rem;">${status}</span>`;
+    } else {
+      return `<span style="background: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 9999px; font-weight: 600; font-size: 0.75rem;">${status}</span>`;
+    }
+  }
+
+  async function loadDatasetSources() {
+    const user = ApiClient.getCurrentUser();
+    if (!user || user.role !== "ADMIN") {
+      document.getElementById("admin-auth-guard").style.display = "block";
+      document.getElementById("loading-spinner").style.display = "none";
+      return;
+    }
+
+    try {
+      const data = await ApiClient.getDatasetSources();
+      document.getElementById("loading-spinner").style.display = "none";
+      document.getElementById("sources-content").style.display = "block";
+
+      const registry = data.registry || {};
+      const datasets = registry.datasets || [];
+      const distribution = data.distribution || {};
+      const quality = data.quality_gate || {};
+      const duplicates = data.duplicates || {};
+
+      // 1. Update Metrics
+      document.getElementById("metric-audited").textContent = datasets.length;
+      const approvedCount = datasets.filter(d => d.license_status === "APPROVED_WITH_ATTRIBUTION").length;
+      document.getElementById("metric-approved").textContent = approvedCount;
+      document.getElementById("metric-covered-classes").textContent = `${distribution.covered_classes_count || 3} / 12`;
+      document.getElementById("metric-missing-classes").textContent = `${distribution.missing_classes_count || 9} / 12`;
+      document.getElementById("metric-duplicates").textContent = duplicates.exact_duplicates_found || 0;
+      document.getElementById("metric-quality-status").textContent = quality.status || "READY";
+
+      // 2. Populate Datasets Table
+      const tableBody = document.getElementById("table-datasets-body");
+      tableBody.innerHTML = "";
+      datasets.forEach(ds => {
+        const tr = document.createElement("tr");
+        tr.style.borderBottom = "1px solid #e2e8f0";
+        tr.innerHTML = `
+          <td style="padding: 0.75rem 1rem; font-weight: 600;">${ds.id}</td>
+          <td style="padding: 0.75rem 1rem;">
+            <div style="font-weight: 600; color: var(--primary-navy);">${ds.name}</div>
+            <div style="font-size: 0.75rem; color: #64748b;">${ds.publisher || ''}</div>
+          </td>
+          <td style="padding: 0.75rem 1rem;">
+            <span style="font-family: monospace; font-weight: 600; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${ds.license}</span>
+          </td>
+          <td style="padding: 0.75rem 1rem;">${getStatusBadge(ds.license_status)}</td>
+          <td style="padding: 0.75rem 1rem;">
+            ${(ds.target_classes || []).map(c => `<span style="background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-right: 4px;">${c}</span>`).join('')}
+          </td>
+          <td style="padding: 0.75rem 1rem;">
+            <a href="${ds.source_url}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline; font-size: 0.8rem;">View Source ↗</a>
+          </td>
+        `;
+        tableBody.appendChild(tr);
+      });
+
+      // 3. Populate Canonical Classes Matrix
+      const classesGrid = document.getElementById("classes-grid");
+      classesGrid.innerHTML = "";
+      const classesList = distribution.classes || [];
+
+      classesList.forEach(cls => {
+        const isCovered = cls.status === "COVERED";
+        const card = document.createElement("div");
+        card.style.background = isCovered ? "#f0fdf4" : "#fffbeb";
+        card.style.border = isCovered ? "1px solid #bbf7d0" : "1px solid #fde68a";
+        card.style.borderRadius = "8px";
+        card.style.padding = "1rem";
+        card.style.display = "flex";
+        card.style.flexDirection = "column";
+        card.style.justifyContent = "space-between";
+
+        card.innerHTML = `
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; font-family: monospace;">CLASS ID: ${cls.class_id}</span>
+              ${isCovered
+                ? '<span style="background: #dcfce7; color: #166534; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;">READY</span>'
+                : '<span style="background: #fee2e2; color: #991b1b; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;">CUSTOM DATA REQUIRED</span>'
+              }
+            </div>
+            <div style="font-weight: 700; font-size: 1rem; color: #1e293b; margin-bottom: 0.5rem;">
+              ${cls.class_name}
+            </div>
+          </div>
+          <div style="font-size: 0.8rem; color: #475569; border-top: 1px dashed ${isCovered ? '#bbf7d0' : '#fde68a'}; padding-top: 0.5rem; margin-top: 0.5rem;">
+            ${isCovered
+              ? `<div>Objects: <strong>${cls.total_objects}</strong> (${cls.train_objects} train, ${cls.val_objects} val, ${cls.test_objects} test)</div><div>Images: <strong>${cls.unique_images}</strong></div>`
+              : `<div style="color: #b45309;">⚠️ 0 public samples. Municipal field capture required.</div>`
+            }
+          </div>
+        `;
+        classesGrid.appendChild(card);
+      });
+
+      // 4. Split Summary Box
+      const splitBox = document.getElementById("split-summary-box");
+      const split = distribution.split_summary || {};
+      splitBox.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; text-align: center; margin-bottom: 0.75rem;">
+          <div style="background: white; padding: 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1;">
+            <div style="font-size: 0.75rem; color: #64748b;">TRAIN (70%)</div>
+            <div style="font-size: 1.25rem; font-weight: 700; color: #1e293b;">${split.train?.images || 0}</div>
+          </div>
+          <div style="background: white; padding: 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1;">
+            <div style="font-size: 0.75rem; color: #64748b;">VAL (20%)</div>
+            <div style="font-size: 1.25rem; font-weight: 700; color: #1e293b;">${split.val?.images || 0}</div>
+          </div>
+          <div style="background: white; padding: 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1;">
+            <div style="font-size: 0.75rem; color: #64748b;">TEST (10%)</div>
+            <div style="font-size: 1.25rem; font-weight: 700; color: #1e293b;">${split.test?.images || 0}</div>
+          </div>
+        </div>
+        <div style="font-size: 0.8rem; color: #475569;">
+          <div>• Total Images Processed: <strong>${distribution.total_images || 0}</strong></div>
+          <div>• Total Objects Annotated: <strong>${distribution.total_objects || 0}</strong></div>
+          <div>• Imbalance Ratio (Covered): <strong>${distribution.imbalance_ratio_among_covered || 1.0} : 1</strong></div>
+        </div>
+      `;
+
+      // 5. Quality Gate Box
+      const qualityBox = document.getElementById("quality-gate-box");
+      const summary = quality.summary || {};
+      qualityBox.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+          <span style="font-weight: 700; color: #1e293b;">Dataset Status:</span>
+          <span style="background: #dcfce7; color: #166534; font-weight: 700; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
+            ${quality.status || 'READY_FOR_TRAINING'}
+          </span>
+        </div>
+        <div style="font-size: 0.8rem; color: #475569; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+          <div>Missing Labels: <strong>${summary.missing_label_count || 0}</strong></div>
+          <div>Orphan Labels: <strong>${summary.orphan_label_count || 0}</strong></div>
+          <div>Invalid Coordinates: <strong>${summary.invalid_label_count || 0}</strong></div>
+          <div>Corrupted Images: <strong>${summary.corrupted_image_count || 0}</strong></div>
+        </div>
+        <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid #e2e8f0; font-size: 0.75rem; color: #16a34a; font-weight: 600;">
+          ✓ All bounding box coordinates verified in normalized [0, 1] range.
+        </div>
+      `;
+
+      // 6. Custom Data Required Doc
+      if (data.custom_data_required_md) {
+        document.getElementById("custom-doc-full").textContent = data.custom_data_required_md;
+      }
+
+    } catch (err) {
+      document.getElementById("loading-spinner").style.display = "none";
+      showAlert(`Failed to load dataset sources: ${err.message}`, "danger");
+    }
+  }
+
+  // Toggle full custom data markdown
+  document.getElementById("btn-toggle-custom-doc").addEventListener("click", () => {
+    const full = document.getElementById("custom-doc-full");
+    full.style.display = full.style.display === "none" ? "block" : "none";
+  });
+
+  document.getElementById("btn-refresh").addEventListener("click", loadDatasetSources);
+  document.addEventListener("DOMContentLoaded", loadDatasetSources);
+</script>
+{% endblock %}

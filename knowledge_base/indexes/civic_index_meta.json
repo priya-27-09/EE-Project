@@ -1,0 +1,74 @@
+[
+  {
+    "chunk_id": "DOC-TEST-SLA-01_chunk_0",
+    "document_id": "DOC-TEST-SLA-01",
+    "title": "Citizen Grievance Redressal SLA",
+    "source": "DARPG Model Municipal Charter",
+    "source_url": "https://darpg.gov.in/citizen-charter",
+    "department": "Administration",
+    "page": 1,
+    "section": "Citizen Grievance Redressal SLA",
+    "text": "CITIZEN'S CHARTER AND CIVIC GRIEVANCE REDRESSAL SERVICE LEVEL AGREEMENTS\nDepartment of Administrative Reforms and Public Grievances (DARPG Model Municipal Citizen Charter)\nSource: https://darpg.gov.in/citizen-charter\nDepartment: Administration\nDocument ID: DOC-2026-000004\nVersion: 1.0",
+    "vector_index_id": 0
+  },
+  {
+    "chunk_id": "DOC-TEST-SLA-01_chunk_1",
+    "document_id": "DOC-TEST-SLA-01",
+    "title": "Citizen Grievance Redressal SLA",
+    "source": "DARPG Model Municipal Charter",
+    "source_url": "https://darpg.gov.in/citizen-charter",
+    "department": "Administration",
+    "page": 1,
+    "section": "1. CITIZEN RIGHTS AND CIVIC GUARANTEE",
+    "text": "Every resident of the municipality has a statutory right to prompt, transparent, and accountable redressal of civic grievances relating to public health, roads, streetlights, drainage, water supply, and municipal solid waste. 2.",
+    "vector_index_id": 1
+  },
+  {
+    "chunk_id": "DOC-TEST-SLA-01_chunk_2",
+    "document_id": "DOC-TEST-SLA-01",
+    "title": "Citizen Grievance Redressal SLA",
+    "source": "DARPG Model Municipal Charter",
+    "source_url": "https://darpg.gov.in/citizen-charter",
+    "department": "Administration",
+    "page": 1,
+    "section": "1. CITIZEN RIGHTS AND CIVIC GUARANTEE",
+    "text": "elating to public health, roads, streetlights, drainage, water supply, and municipal solid waste. 2. SERVICE LEVEL AGREEMENT (SLA) TIMELINES\nWhen a grievance is formally submitted through the AI Civic Guardian portal, the following maximum time bounds apply:\n- Garbage Overflow and Open Dumping: 12 Hours\n- Streetlight Breakdown / Dark Spots: 24 Hours\n- Major Potholes on Arterial Roads: 24 Hours\n- Residential Road Surface Repair: 48 to 72 Hours\n- Potable Water Supply Main Bursts: 8 to 12 Hours\n- Open Manhole / Hazardous Drainage Cover: 6 Hours (Immediate Emergency Barricading within 1 hour)\n- Dead Animal Carcass Removal: 6 Hours\n- Illegal Tree Branch Fall / Road Blockage: 8 Hours",
+    "vector_index_id": 2
+  },
+  {
+    "chunk_id": "DOC-TEST-SLA-01_chunk_3",
+    "document_id": "DOC-TEST-SLA-01",
+    "title": "Citizen Grievance Redressal SLA",
+    "source": "DARPG Model Municipal Charter",
+    "source_url": "https://darpg.gov.in/citizen-charter",
+    "department": "Administration",
+    "page": 1,
+    "section": "3. THREE-TIER ESCALATION MATRIX",
+    "text": "If a grievance is not resolved within the specified SLA timeline, the system automatically escalates the complaint:\n- Level 1 (Initial Assignment): Ward Junior Engineer / Sanitary Inspector. SLA: 0 to 24/48 hours.\n- Level 2 (First Escalation): Assistant Executive Engineer / Zonal Health Officer. Escalated on Day 3.\n- Level 3 (Final Escalation): Additional Municipal Commissioner / Public Grievance Redressal Officer. Escalated on Day 5.",
+    "vector_index_id": 3
+  },
+  {
+    "chunk_id": "DOC-TEST-SLA-01_chunk_4",
+    "document_id": "DOC-TEST-SLA-01",
+    "title": "Citizen Grievance Redressal SLA",
+    "source": "DARPG Model Municipal Charter",
+    "source_url": "https://darpg.gov.in/citizen-charter",
+    "department": "Administration",
+    "page": 1,
+    "section": "4. CITIZEN RE-OPENING AND APPEAL RIGHTS",
+    "text": "Upon status changing to \"RESOLVED\", the citizen receives an automated notification with official resolution evidence. If the physical condition remains unsatisfactory, the citizen has the statutory right to re-open the complaint within 7 days of resolution by submitting counter-photographic evidence. Re-opened complaints bypass Level 1 and route directly to the Zonal Executive Engineer.",
+    "vector_index_id": 4
+  },
+  {
+    "chunk_id": "DOC-TEST-SLA-01_chunk_5",
+    "document_id": "DOC-TEST-SLA-01",
+    "title": "Citizen Grievance Redressal SLA",
+    "source": "DARPG Model Municipal Charter",
+    "source_url": "https://darpg.gov.in/citizen-charter",
+    "department": "Administration",
+    "page": 1,
+    "section": "5. BLOCKCHAIN AND AUDIT INTEGRITY ASSURANCE",
+    "text": "To ensure complete administrative transparency and prevent unauthorized backdating or tampering of complaint status, all critical lifecycle milestones (Registration, Status Changes, Evidence Uploads, and Verification Reviews) are immutably anchored to the municipal audit trail.",
+    "vector_index_id": 5
+  }
+]

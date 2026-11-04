@@ -1,0 +1,17 @@
+path: C:/Users/priya/OneDrive/Desktop/EE/dataset/versions/DS-2026-000018
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: Garbage Overflow
+  1: Illegal Dumping
+  2: Pothole
+  3: Damaged Road
+  4: Water Leakage
+  5: Sewage Overflow
+  6: Broken Street Light
+  7: Drainage Problem
+  8: Traffic Issue
+  9: Building Damage
+  10: Park/Public Space Damage
+  11: Environmental Pollution
