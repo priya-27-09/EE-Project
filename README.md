@@ -125,7 +125,7 @@ This repository includes turnkey configuration for Render:
 2. Create a new **Web Service** using `render.yaml` (Blueprint) or manual configuration:
    - **Runtime:** `Python`
    - **Build Command:** `pip install --upgrade pip && pip install -r requirements.txt`
-   - **Start Command:** `uvicorn asgi_app:app --host 0.0.0.0 --port $PORT`
+   - **Start Command:** `gunicorn asgi_app:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT`
 3. Configure Environment Variables:
    - `DATABASE_URL`: Your managed PostgreSQL connection URL.
    - `JWT_SECRET_KEY`: A secure 64-character secret.
@@ -140,3 +140,4 @@ This repository includes turnkey configuration for Render:
 - Stateless JWT authentication with role-based claim enforcement.
 - Input validation on all endpoints preventing SQL injection, XSS, and path traversal.
 - Immutable audit logging for all grievance status changes and administrative actions.
+

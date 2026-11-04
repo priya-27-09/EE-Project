@@ -1,2 +1,2 @@
-web: uvicorn asgi_app:app --host 0.0.0.0 --port $PORT
+web: gunicorn asgi_app:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
 
